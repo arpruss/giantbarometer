@@ -1,8 +1,0 @@
-mobi.omegacentauri.giantbarometer.app-pngs-0 C:\cygwin64\home\Alexander_Pruss\android\barometer\app\build\generated\res\pngs\debug
-mobi.omegacentauri.giantbarometer.app-resValues-1 C:\cygwin64\home\Alexander_Pruss\android\barometer\app\build\generated\res\resValues\debug
-mobi.omegacentauri.giantbarometer.app-rs-2 C:\cygwin64\home\Alexander_Pruss\android\barometer\app\build\generated\res\rs\debug
-mobi.omegacentauri.giantbarometer.app-mergeDebugResources-3 C:\cygwin64\home\Alexander_Pruss\android\barometer\app\build\intermediates\incremental\debug\mergeDebugResources\merged.dir
-mobi.omegacentauri.giantbarometer.app-mergeDebugResources-4 C:\cygwin64\home\Alexander_Pruss\android\barometer\app\build\intermediates\incremental\debug\mergeDebugResources\stripped.dir
-mobi.omegacentauri.giantbarometer.app-merged_res-5 C:\cygwin64\home\Alexander_Pruss\android\barometer\app\build\intermediates\merged_res\debug
-mobi.omegacentauri.giantbarometer.app-debug-6 C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\debug\res
-mobi.omegacentauri.giantbarometer.app-main-7 C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\res

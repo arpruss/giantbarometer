@@ -55,9 +55,6 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	private View toolbarView;
 	private Runnable buttonHideRunnable;
 	private static final long buttonHideTime = 8000;
-	private boolean colorByZone;
-	private String formula = Options.PREF_FORMULA_FOX;
-	private boolean warnMaximum;
 
 	List<DistanceDatum> data = new ArrayList<>();
 	private GraphView graphView;
@@ -71,6 +68,12 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	private NOAA noaa;
 	private double temperature = -1;
 	private long startTime;
+	private boolean showPressure;
+	private boolean showAltitude;
+	private boolean showGraph;
+	private String pressureUnits;
+	private String altitudeUnits;
+	private String calibration;
 
 	boolean haveLocationPermission() {
 		if(true) return true;
@@ -326,12 +329,15 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
     public void showValue(long tMillis, double pressure) {
 		if (pressure > 0) {
-			pressureText.setText(String.format("%.1f", pressure));
+			if (showPressure)
+				pressureText.setText(formatPressure(pressure));
 			if (pressureAtSeaLevel >= 0 || System.currentTimeMillis() > startTime+10000) {
 				double alt = calculateAltitude(pressure);
-				altitudeText.setText(String.format("%.1f", alt));
+				if (showAltitude)
+					altitudeText.setText(formatAltitude(alt));
 				data.add(new DistanceDatum(tMillis, alt));
-				graphView.setData(data, true);
+				if (showGraph)
+					graphView.setData(data, true);
 			}
 //			Log.v("GiantBarometer", ""+pressure+" "+alt);
 		}
@@ -341,8 +347,28 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		}
     }
 
+	private String formatAltitude(double alt) {
+		if (altitudeUnits.equals("meters"))
+			return String.format("%.1f", alt);
+		else if (altitudeUnits.equals("feet"))
+			return String.format("%.0f", alt * 3.280839895);
+		else
+			return " ? ";
+	}
+
+	private String formatPressure(double pressure) {
+		if (pressureUnits.equals("hPa"))
+			return String.format("%.1f", pressure);
+		else if (pressureUnits.equals("kPa"))
+			return String.format("%.2f", pressure/10.);
+		else if (pressureUnits.equals("inHg"))
+			return String.format("%.1f", pressure/1.33322387415);
+		else
+			return " ? ";
+	}
+
 	private synchronized double calculateAltitude(double pressure) {
-		double p0 = pressureAtSeaLevel < 0 ? 1013.25 : pressureAtSeaLevel;
+		double p0 = (calibration.equals("uncalibrated") || pressureAtSeaLevel < 0) ? 1013.25 : pressureAtSeaLevel;
 
 		// todo: temperature
 		// https://physics.stackexchange.com/questions/333475/how-to-calculate-altitude-from-current-temperature-and-pressure
@@ -396,6 +422,17 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		if (!haveAllPermissions())
 			return;
 
+		showPressure = options.getBoolean(Options.PREF_SHOW_PRESSURE, true);
+		showAltitude = options.getBoolean(Options.PREF_SHOW_ALTITUDE, true);
+		showGraph = options.getBoolean(Options.PREF_SHOW_GRAPH, true);
+		pressureUnits = options.getString(Options.PREF_PRESSURE_UNITS, "hPa");
+		altitudeUnits = options.getString(Options.PREF_ALTITUDE_UNITS, "meters");
+		calibration = options.getString(Options.PREF_CALIBRATION, "nws");
+
+		pressureText.setVisibility(showPressure ? View.VISIBLE : View.GONE);
+		altitudeText.setVisibility(showAltitude ? View.VISIBLE : View.GONE);
+		graphView.setVisibility(showGraph ? View.VISIBLE : View.GONE);
+
 		setOrientation();
 		setFullScreen();
 		showButtons();
@@ -413,17 +450,22 @@ public class BarometerActivity extends Activity implements SensorEventListener {
         showValue(0,-1);
         lastValidTime = -WAIT_TIME;
 		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-		locationListener = new LocationListener() {
-			@Override
-			public void onLocationChanged(Location location) {
-				updateStandardPressure(location);
-			}
-		};
 		startTime = System.currentTimeMillis();
-		updateStandardPressure(locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
-		locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
-				standardPressureTimeout/4,
-				500, locationListener);
+		if (calibration.equals("nws")) {
+			locationListener = new LocationListener() {
+				@Override
+				public void onLocationChanged(Location location) {
+					updateStandardPressure(location);
+				}
+			};
+			updateStandardPressure(locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
+			locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+					standardPressureTimeout / 4,
+					500, locationListener);
+		}
+		else {
+			locationListener = null;
+		}
 	}
 
 	public void onSettingsClick(View view) {

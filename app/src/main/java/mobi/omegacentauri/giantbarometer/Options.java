@@ -26,17 +26,13 @@ public class Options extends PreferenceActivity {
     public static final String PREF_SCREEN_ON = "screenOn";
     public static final String PREF_ORIENTATION = "orientation";
     public static final String PREF_FULLSCREEN = "fullscreen";
-    public static final String PREF_DEVICE_ADDRESS = "address";
-    public static final String PREF_SERVICE = "service";
-    public static final String PREF_BIRTH_YEAR = "birthYear";
-    public static final String PREF_ZONE = "zoneDisplay";
-    public static final String PREF_FORMULA = "formula";
-    public static final String PREF_FORMULA_FOX = "fox";
-    public static final String PREF_FORMULA_TANAKA = "tanaka";
-    public static final String PREF_FORMULA_HUNT = "hunt";
-    public static final String PREF_WARN_MAXIMUM = "warnMaximum";
-    public static final String PREF_USE_ADVERTISED = "useAdvertised";
-    public static final String PREF_TX_POWER = "txPower";
+
+    public static final String PREF_PRESSURE_UNITS = "pressureUnits";
+    public static final String PREF_ALTITUDE_UNITS = "altitudeUnits";
+    public static final String PREF_SHOW_PRESSURE = "showPressure";
+    public static final String PREF_SHOW_ALTITUDE = "showAltitude";
+    public static final String PREF_SHOW_GRAPH = "showGraph";
+    public static final String PREF_CALIBRATION = "calibration";
     private SharedPreferences.OnSharedPreferenceChangeListener listener;
     private SharedPreferences options;
 
@@ -131,18 +127,6 @@ public class Options extends PreferenceActivity {
 
     private void customizeDisplay() {
         scanPreferences(getPreferenceScreen());
-        boolean needMax = options.getBoolean(PREF_ZONE, false) || options.getBoolean(PREF_WARN_MAXIMUM, false);
-        ListPreference birthYear = (ListPreference)findPreference(PREF_BIRTH_YEAR);
-
-        int now = Calendar.getInstance().get(Calendar.YEAR);
-        CharSequence years[] = new CharSequence[120];
-        for (int i = 0 ; i < 120 ; i++) {
-            years[i] = "" + (now - 119 + i);
-        }
-        birthYear.setEntries(years);
-        birthYear.setEntryValues(years);
-        birthYear.setDefaultValue("1984");
-        birthYear.setEnabled(needMax);
     }
 
     public void setSummary(ListPreference p) {

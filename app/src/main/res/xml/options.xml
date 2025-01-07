@@ -1,10 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-    <PreferenceCategory android:title="Connection and display">
         <CheckBoxPreference android:title="Keep screen on when active"
             android:key="screenOn"
             android:defaultValue="false"/>
-    </PreferenceCategory>
+    <ListPreference android:title="Altitude calibration"
+        android:key="calibration"
+        android:entries="@array/altitudeOffsets"
+        android:entryValues="@array/altitudeOffsetValues"
+        android:defaultValue="nws"/>
+    <CheckBoxPreference android:title="Show pressure"
+        android:key="showPressure"
+        android:defaultValue="true"/>
+    <CheckBoxPreference android:title="Show altitude"
+        android:key="showAltitude"
+        android:defaultValue="true"/>
+    <CheckBoxPreference android:title="Show altitude graph"
+        android:key="showGraph"
+        android:defaultValue="true"/>
+    <ListPreference android:title="Pressure units"
+        android:key="pressureUnits"
+        android:entryValues="@array/pressureUnits"
+        android:entries="@array/pressureUnits"
+        android:defaultValue="hPa"/>
+    <ListPreference android:title="Altitude units"
+        android:key="altitudeUnits"
+        android:entries="@array/altitudeUnits"
+        android:entryValues="@array/altitudeUnits"
+        android:defaultValue="meters"/>
     <PreferenceCategory android:title="Licenses and Copyrights">
     <Preference android:key="license" android:title="View Licenses and Copyrights"/>
     </PreferenceCategory>

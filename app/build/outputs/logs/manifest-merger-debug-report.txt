@@ -1,0 +1,99 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:17:1-55:12
+INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:17:1-55:12
+INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:17:1-55:12
+INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:17:1-55:12
+INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:17:1-55:12
+INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:17:1-55:12
+INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:17:1-55:12
+	package
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:19:5-48
+		INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+		INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+	android:versionName
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:21:11-37
+		INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+		INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+	xmlns:tools
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:18:5-51
+	xmlns:android
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:17:11-69
+	android:versionCode
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:20:11-36
+		INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+		INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+uses-feature#android.hardware.bluetooth_le
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:26:5-89
+	android:required
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:26:64-87
+	android:name
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:26:19-63
+uses-permission#android.permission.INTERNET
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:27:5-66
+	android:name
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:27:22-64
+uses-permission#android.permission.ACCESS_COARSE_LOCATION
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:28:5-80
+	android:name
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:28:22-78
+uses-feature#android.hardware.location.network
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:30:5-95
+	android:required
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:30:68-92
+	android:name
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:30:19-67
+application
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:32:5-54:19
+	android:label
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:32:18-49
+	android:icon
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:33:18-54
+	android:theme
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:34:18-65
+activity#mobi.omegacentauri.giantbarometer.BarometerActivity
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:36:9-44:20
+	android:label
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:39:19-50
+	android:exported
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:38:13-36
+	android:configChanges
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:37:13-74
+	android:name
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:36:19-85
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:40:13-43:29
+action#android.intent.action.MAIN
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:41:17-68
+	android:name
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:41:25-66
+category#android.intent.category.LAUNCHER
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:42:17-76
+	android:name
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:42:27-74
+activity#mobi.omegacentauri.giantbarometer.Options
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:45:9-51:20
+	android:exported
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:46:13-36
+	android:name
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:45:19-42
+intent-filter#category:name:android.intent.category.PREFERENCE
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:48:13-50:29
+category#android.intent.category.PREFERENCE
+ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:49:17-79
+	android:name
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml:49:27-76
+uses-sdk
+INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+		INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+		ADDED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml
+		INJECTED from C:\cygwin64\home\Alexander_Pruss\android\barometer\app\src\main\AndroidManifest.xml

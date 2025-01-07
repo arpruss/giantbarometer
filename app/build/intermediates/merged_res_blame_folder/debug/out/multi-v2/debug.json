@@ -1,0 +1,82 @@
+{
+    "logs": [
+        {
+            "outputFile": "C:\\Users\\alexander_pruss\\.gradle\\daemon\\7.5\\mobi.omegacentauri.giantbarometer.app-merged_res-5:\\values_values.arsc.flat",
+            "map": [
+                {
+                    "source": "C:\\cygwin64\\home\\Alexander_Pruss\\android\\barometer\\app\\src\\main\\res\\values\\arrays.xml",
+                    "from": {
+                        "startLines": "11,-1,-1,-1",
+                        "startColumns": "4,-1,-1,-1",
+                        "startOffsets": "318,-1,-1,-1",
+                        "endLines": "15,-1,-1,-1",
+                        "endColumns": "19,-1,-1,-1",
+                        "endOffsets": "474,-1,-1,-1"
+                    },
+                    "to": {
+                        "startLines": "2,7,11,15",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,211,370,484",
+                        "endLines": "6,10,14,19",
+                        "endColumns": "19,19,19,19",
+                        "endOffsets": "206,365,479,615"
+                    }
+                },
+                {
+                    "source": "C:\\cygwin64\\home\\Alexander_Pruss\\android\\barometer\\app\\src\\main\\res\\values\\strings.xml",
+                    "from": {
+                        "startLines": "-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1",
+                        "startColumns": "-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1",
+                        "startOffsets": "-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1"
+                    },
+                    "to": {
+                        "startLines": "20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "620,665,720,796,844,898,981,1026,1091,1147,1199,1246,1295,1350,1393,1436,1479,1523,1595,1659,1719,1776,1850,1908",
+                        "endColumns": "44,54,75,47,53,82,44,64,55,51,46,48,54,42,42,42,43,71,63,59,56,73,57,59",
+                        "endOffsets": "660,715,791,839,893,976,1021,1086,1142,1194,1241,1290,1345,1388,1431,1474,1518,1590,1654,1714,1771,1845,1903,1963"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "mobi.omegacentauri.giantbarometer.app-merged_res-5:/values_values.arsc.flat",
+            "map": [
+                {
+                    "source": "C:\\cygwin64\\home\\Alexander_Pruss\\android\\barometer\\app\\src\\main\\res\\values\\arrays.xml",
+                    "from": {
+                        "startLines": "-1,16,-1,-1",
+                        "startColumns": "-1,4,-1,-1",
+                        "startOffsets": "-1,480,-1,-1",
+                        "endLines": "-1,20,-1,-1",
+                        "endColumns": "-1,19,-1,-1",
+                        "endOffsets": "-1,688,-1,-1"
+                    },
+                    "to": {
+                        "startLines": "2,7,12,16",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,211,419,533",
+                        "endLines": "6,11,15,20",
+                        "endColumns": "19,19,19,19",
+                        "endOffsets": "206,414,528,664"
+                    }
+                },
+                {
+                    "source": "C:\\cygwin64\\home\\Alexander_Pruss\\android\\barometer\\app\\src\\main\\res\\values\\strings.xml",
+                    "from": {
+                        "startLines": "-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1",
+                        "startColumns": "-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1",
+                        "startOffsets": "-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1"
+                    },
+                    "to": {
+                        "startLines": "21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "669,714,769,845,893,947,1030,1075,1140,1196,1248,1295,1344,1399,1442,1485,1528,1572,1644,1708,1768,1825,1899,1957",
+                        "endColumns": "44,54,75,47,53,82,44,64,55,51,46,48,54,42,42,42,43,71,63,59,56,73,57,59",
+                        "endOffsets": "709,764,840,888,942,1025,1070,1135,1191,1243,1290,1339,1394,1437,1480,1523,1567,1639,1703,1763,1820,1894,1952,2012"
+                    }
+                }
+            ]
+        }
+    ]
+}

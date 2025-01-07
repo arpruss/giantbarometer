@@ -3,7 +3,7 @@
 #echo Roboto-Medium
 #python3 dumpfont.py Roboto-Medium.ttf SansMediumDigitsColon > app/src/main/java/omegacentauri/mobi/simplestopwatch/SansMediumDigitsColon.java
 #echo Roboto-Bold
-python dumpfont.py ../stopwatch/Roboto-Bold.ttf SansBold mobi.omegacentauri.giantbarometer '-0123456789?.' > app/src/main/java/mobi/omegacentauri/giantbarometer/SansBold.java
+python dumpfont.py ../stopwatch/Roboto-Bold.ttf SansBold mobi.omegacentauri.giantbarometer > app/src/main/java/mobi/omegacentauri/giantbarometer/SansBold.java
 echo Roboto-Black
 #python3 dumpfont.py Roboto-Black.ttf SansBlackDigitsColon > app/src/main/java/omegacentauri/mobi/simplestopwatch/SansBlackDigitsColon.java
 #echo DSEG7

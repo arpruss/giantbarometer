@@ -44,7 +44,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	double pressureAtSeaLevel = -1;
 	long lastPressureUpdate = -1;
     static public long lastValidTime = -WAIT_TIME;
-	Handler timeoutHandler;
+//	Handler timeoutHandler;
 	Handler buttonHideHandler;
 	static final long initialTimeout = 40000;
 	static final long periodicTimeout = 20000;
@@ -183,14 +183,14 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 				sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE),
 				SensorManager.SENSOR_DELAY_NORMAL);
 
-		timeoutHandler = new Handler();
-		periodicTimeoutRunnable = new Runnable() {
-			@Override
-			public void run() {
-				pressureText.setText(" ? ");
-				timeoutHandler.postDelayed(periodicTimeoutRunnable, periodicTimeout);
-			}
-		};
+//		timeoutHandler = new Handler();
+//		periodicTimeoutRunnable = new Runnable() {
+//			@Override
+//			public void run() {
+//				pressureText.setText(" ? ");
+//				timeoutHandler.postDelayed(periodicTimeoutRunnable, periodicTimeout);
+//			}
+//		};
 		/*
 		standardPressureHandler = new Handler();
 		standardPressureTimeoutRunnable = new Runnable() {
@@ -211,10 +211,10 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
 	private void updateStandardPressure(Location location) {
 		long t = System.currentTimeMillis();
-		Log.v("GiantBarometer", ""+location+" "+lastPressureUpdate+" "+t);
+//		Log.v("GiantBarometer", ""+location+" "+lastPressureUpdate+" "+t);
 
 		if (lastPressureUpdate < 0 || t >= lastPressureUpdate + standardPressureTimeout) {
-			Log.v("GiantBarometer", "updating");
+//			Log.v("GiantBarometer", "updating");
 			lastPressureUpdate = System.currentTimeMillis();
 			AsyncTask.execute(new Runnable() {
 				@Override
@@ -407,8 +407,8 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	public void onDataReceived(long tMillis, double distance) {
 		if (distance >= 0) {
 			lastValidTime = System.currentTimeMillis();
-			timeoutHandler.removeCallbacksAndMessages(null);
-			timeoutHandler.postDelayed(periodicTimeoutRunnable, periodicTimeout);
+//			timeoutHandler.removeCallbacksAndMessages(null);
+//			timeoutHandler.postDelayed(periodicTimeoutRunnable, periodicTimeout);
 			showValue(tMillis, distance);
 		}
 		else if (System.currentTimeMillis() > lastValidTime + WAIT_TIME) {
@@ -438,7 +438,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 			locationManager.removeUpdates(locationListener);
 			locationListener = null;
 		}
-		timeoutHandler.removeCallbacksAndMessages(null);
+//		timeoutHandler.removeCallbacksAndMessages(null);
 	}
 
 	@SuppressLint("MissingPermission")
@@ -453,9 +453,26 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		showPressure = options.getBoolean(Options.PREF_SHOW_PRESSURE, true);
 		showAltitude = options.getBoolean(Options.PREF_SHOW_ALTITUDE, true);
 		showGraph = options.getBoolean(Options.PREF_SHOW_GRAPH, true);
-		pressureUnits = options.getString(Options.PREF_PRESSURE_UNITS, "hPa");
-		altitudeUnits = options.getString(Options.PREF_ALTITUDE_UNITS, "meters");
-		calibration = options.getString(Options.PREF_CALIBRATION, "nws");
+
+		boolean invalidateData = false;
+		String s = options.getString(Options.PREF_PRESSURE_UNITS, "hPa");
+		if (!s.equals(pressureUnits)) {
+			invalidateData = true;
+			pressureUnits = s;
+		}
+		s = options.getString(Options.PREF_ALTITUDE_UNITS, "meters");
+		if (!s.equals(altitudeUnits)) {
+			invalidateData = true;
+			altitudeUnits = s;
+		}
+		s = options.getString(Options.PREF_CALIBRATION, "nws");
+		if (!s.equals(calibration)) {
+			invalidateData = true;
+			calibration = s;
+		}
+		if (invalidateData) {
+			altitudeData.clear();
+		}
 		smoothing = options.getString(Options.PREF_SMOOTHING, "med2000");
 
 		pressureText.setVisibility(showPressure ? View.VISIBLE : View.GONE);
@@ -466,16 +483,15 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		setFullScreen();
 		showButtons();
 
-		timeoutHandler.removeCallbacksAndMessages(null);
-		timeoutHandler.postDelayed(new Runnable() {
-			@Override
-			public void run() {
-				Toast.makeText(BarometerActivity.this, "Cannot connect to heart rate", Toast.LENGTH_LONG).show();
-//				updateCache(false);
-				Log.e("hrshow", "cannot connect");
-				finish();
-			}
-		}, initialTimeout);
+//		timeoutHandler.removeCallbacksAndMessages(null);
+//		timeoutHandler.postDelayed(new Runnable() {
+//			@Override
+//			public void run() {
+////				updateCache(false);
+//				Log.e("hrshow", "cannot connect");
+//				finish();
+//			}
+//		}, initialTimeout);
         showValue(0,-1);
         lastValidTime = -WAIT_TIME;
 		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -530,6 +546,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
 	public void onZero(View view) {
 		zeroedPressure = lastPressure;
+		onResetGraph(view);
 	}
 
 

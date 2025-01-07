@@ -4,9 +4,11 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 
@@ -14,23 +16,26 @@ import java.util.List;
 
 public class GraphView extends View {
     private final Paint backPaint;
+    private final float labelX;
     RectF bounds = new RectF();
     float lineSpacing = 1.05f;
     static final double graphPixelMin = 0.1;
     static final double strokeThicknessDP = 2;
     float letterSpacing = 1f;
-    MiniFont miniFont;
     Paint paint;
     Paint basePaint;
+
+    Paint labelPaint;
+    Paint hLinePaint;
     List<BarometerActivity.TimedDatum> data;
     String[] lines;
     float yOffsets[];
     float xOffsets[];
     float scale = 0.98f;
-    GetCenter getCenterX = null;
-    GetCenter getCenterY = null;
     static final float BASE_FONT_SIZE = 50f;
     private float maxAspect = 1f;
+
+    float nudge;
 
     public GraphView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -42,10 +47,20 @@ public class GraphView extends View {
         DisplayMetrics dm = getResources().getDisplayMetrics() ;
         float strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, (float) strokeThicknessDP, dm);
         paint.setStrokeWidth(strokeWidth);
-        miniFont = new SansBold();
 
         paint.setStyle(Paint.Style.STROKE);
         paint.setColor(Color.WHITE);
+
+        labelPaint = new Paint();
+        labelPaint.setColor(Color.DKGRAY);
+        labelPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, (float) 20, dm));
+
+        hLinePaint = new Paint();
+        hLinePaint.setColor(labelPaint.getColor());
+        nudge = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, (float) 1, dm);
+        hLinePaint.setStrokeWidth(nudge);
+
+        labelX = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, (float) 20, dm);
 
         basePaint = new Paint();
         basePaint.setTextSize(BASE_FONT_SIZE);
@@ -60,25 +75,6 @@ public class GraphView extends View {
         }
     }
 
-    public void setFont(MiniFont mf) {
-        this.miniFont = mf;
-        invalidate();
-    }
-
-    public void setScale(float scale) {
-        this.scale = scale;
-        invalidate();
-    }
-
-    public void setLineSpacing(float l) {
-        lineSpacing = l;
-        invalidate();
-    }
-
-    public void setLetterSpacing(float ls) {
-        letterSpacing = ls;
-        invalidate();
-    }
 
     public void setData(List<BarometerActivity.TimedDatum> d, boolean force) {
         data = d;
@@ -127,19 +123,18 @@ public class GraphView extends View {
             xScale =  w / (xEnd - xStart);
         }
         yStart = Double.POSITIVE_INFINITY;
-        double maxY = Double.NEGATIVE_INFINITY;
+        double yEnd = Double.NEGATIVE_INFINITY;
         for (BarometerActivity.TimedDatum d : data) {
             if (d.value < yStart)
                 yStart = d.value;
-            if (maxY < d.value)
-                maxY = d.value;
+            if (yEnd < d.value)
+                yEnd = d.value;
         }
-        if (yStart < maxY) {
-            yScale = h / (maxY - yStart);
-        }
-        else {
-            yScale = 1;
-        }
+        yStart = Math.floor(yStart);
+        yEnd = Math.ceil(yEnd);
+        if (yEnd == yStart)
+            yEnd = yStart + 1;
+        yScale = h / (yEnd - yStart);
 
         double prevX = 0;
         double prevY = 0;
@@ -160,43 +155,12 @@ public class GraphView extends View {
                 prevY = y;
             }
         }
+        Rect bounds = new Rect();
+        labelPaint.getTextBounds("0", 0,1,bounds);
+        canvas.drawLine(0,0, (float) (w-1),0,hLinePaint);
+        canvas.drawLine(0, (float) (h-1), (float) (w-1), (float) (h-1),hLinePaint);
+        canvas.drawText(""+(int)yEnd, (float) labelX, (float) bounds.height()+2*nudge, labelPaint);
+        canvas.drawText(""+(int)yStart, (float) labelX, (float) h-2*nudge, labelPaint);
     }
 
-    private float adjustCenter(float canvasSize, GetCenter c, float size) {
-        float canvasCenter = canvasSize / 2f;
-        if (c == null)
-            return canvasCenter;
-        float drawingCenter = c.getCenter();
-        if (canvasCenter == drawingCenter)
-            return canvasCenter;
-        float half = size / 2f;
-        if (drawingCenter < canvasCenter) {
-            if (half <= drawingCenter)
-                return drawingCenter;
-            else
-                return half;
-        }
-        else {
-            if (drawingCenter + half <= canvasSize) {
-                return drawingCenter;
-            }
-            else
-                return canvasSize - half;
-        }
-    }
-    
-    public void setBackColor(int color) {
-        backPaint.setColor(color);
-    }
-
-    public void setTextColor(int textColor) {
-        if (textColor != paint.getColor()) {
-            paint.setColor(textColor);
-            invalidate();
-        }
-    }
-
-    static interface GetCenter {
-        float getCenter();
-    }
 }

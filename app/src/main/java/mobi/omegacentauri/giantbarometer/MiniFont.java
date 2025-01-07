@@ -5,6 +5,7 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.util.Log;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +23,15 @@ abstract public class MiniFont {
                 @Override
                 public Path makePath() {
                     return new Path();
+                }
+            });
+        }
+        if (!map.containsKey('-') && map.containsKey('\u2212')) {
+            final Glyph x = map.get('\u2212');
+            addCharacter('-', x.width, x.lsb, new PathMaker() {
+                @Override
+                public Path makePath() {
+                    return x.path;
                 }
             });
         }

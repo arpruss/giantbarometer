@@ -33,6 +33,7 @@ public class Options extends PreferenceActivity {
     public static final String PREF_SHOW_ALTITUDE = "showAltitude";
     public static final String PREF_SHOW_GRAPH = "showGraph";
     public static final String PREF_CALIBRATION = "calibration";
+    public static final String PREF_ZEROED_PRESSURE = "zeroedPressure";
     private SharedPreferences.OnSharedPreferenceChangeListener listener;
     private SharedPreferences options;
 

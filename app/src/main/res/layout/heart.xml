@@ -55,6 +55,14 @@
             android:src="@drawable/clear"
             android:padding="12dp"
             android:onClick="onResetGraph" />
+        <ImageButton
+            android:id="@+id/zero"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@null"
+            android:src="@drawable/zero"
+            android:padding="12dp"
+            android:onClick="onZero" />
     <ImageButton
         android:id="@+id/settings"
         android:layout_width="wrap_content"

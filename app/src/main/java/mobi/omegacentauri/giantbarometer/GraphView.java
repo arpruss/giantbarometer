@@ -7,7 +7,6 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 
@@ -130,10 +129,10 @@ public class GraphView extends View {
         yStart = Double.POSITIVE_INFINITY;
         double maxY = Double.NEGATIVE_INFINITY;
         for (BarometerActivity.DistanceDatum d : data) {
-            if (d.distance < yStart)
-                yStart = d.distance;
-            if (maxY < d.distance)
-                maxY = d.distance;
+            if (d.pressure < yStart)
+                yStart = d.pressure;
+            if (maxY < d.pressure)
+                maxY = d.pressure;
         }
         if (yStart < maxY) {
             yScale = h / (maxY - yStart);
@@ -147,7 +146,7 @@ public class GraphView extends View {
         boolean first = true;
         for(BarometerActivity.DistanceDatum d : data) {
             double x = (d.tMillis - xStart) * xScale;
-            double y = (d.distance - yStart) * yScale;
+            double y = (d.pressure - yStart) * yScale;
             if (!first) {
                 if (x-prevX >= graphPixelMin) {
                     canvas.drawLine((float) prevX, (float) (h - 1 - prevY), (float) x, (float) (h - 1 - y), paint);

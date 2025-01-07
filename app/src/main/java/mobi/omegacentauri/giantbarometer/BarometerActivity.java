@@ -47,6 +47,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	static final long periodicTimeout = 20000;
 	boolean works;
 
+
 	static final long standardPressureTimeout = 5*60000;
 
 	private BigTextView pressureText;
@@ -74,6 +75,9 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	private String pressureUnits;
 	private String altitudeUnits;
 	private String calibration;
+	private static final double standardPressureAtSeaLevel = 1013.25;
+	double zeroedPressure = standardPressureAtSeaLevel;
+	double lastPressure = standardPressureAtSeaLevel;
 
 	boolean haveLocationPermission() {
 		if(true) return true;
@@ -163,7 +167,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		works = false;
 		toolbarView =findViewById(R.id.toolbar);
 		buttonHideHandler = new Handler();
-		showButtons();
+//		showButtons();
 		data.clear();
 
 		sensorManager = (SensorManager) getSystemService(Service.SENSOR_SERVICE);
@@ -234,6 +238,8 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
 	void showButtons() {
 		toolbarView.setVisibility(View.VISIBLE);
+		findViewById(R.id.resetGraph).setVisibility(showGraph ? View.VISIBLE : View.GONE);
+		findViewById(R.id.zero).setVisibility(calibration.equals("relative") ? View.VISIBLE : View.GONE);
 		if (!isTV()) {
 			if (buttonHideRunnable == null)
 				buttonHideRunnable = new Runnable() {
@@ -329,9 +335,10 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
     public void showValue(long tMillis, double pressure) {
 		if (pressure > 0) {
+			lastPressure = pressure;
 			if (showPressure)
 				pressureText.setText(formatPressure(pressure));
-			if (pressureAtSeaLevel >= 0 || System.currentTimeMillis() > startTime+10000) {
+			if (!calibration.equals("nws") || pressureAtSeaLevel >= 0 || System.currentTimeMillis() > startTime+10000) {
 				double alt = calculateAltitude(pressure);
 				if (showAltitude)
 					altitudeText.setText(formatAltitude(alt));
@@ -368,11 +375,16 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	}
 
 	private synchronized double calculateAltitude(double pressure) {
-		double p0 = (calibration.equals("uncalibrated") || pressureAtSeaLevel < 0) ? 1013.25 : pressureAtSeaLevel;
+		double p0 = (!calibration.equals("nws") || pressureAtSeaLevel < 0) ? standardPressureAtSeaLevel : pressureAtSeaLevel;
 
 		// todo: temperature
 		// https://physics.stackexchange.com/questions/333475/how-to-calculate-altitude-from-current-temperature-and-pressure
-		return 44330 * (1 - Math.pow(pressure/p0, 1./5.255));
+		double alt = 44330 * (1 - Math.pow(pressure/p0, 1./5.255));
+		if (calibration.equals("relative")) {
+			alt -= 44330 * (1 - Math.pow(zeroedPressure/p0, 1./5.255));
+			Log.v("GiantBarometer", ""+zeroedPressure+" "+alt);
+		}
+		return alt;
 
 //		return (Math.pow(p0/pressure,1/5.257)-1)*temperature / 0.0065;
 	}
@@ -399,7 +411,6 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	@Override
 	public void onBackPressed() {
 //		updateCache(false);
-		Log.v("hrshow", "onBackPressed");
 		super.onBackPressed();
 	}
 
@@ -407,6 +418,8 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	public void onPause() {
 		super.onPause();
 
+		if (calibration.equals("relative"))
+			options.edit().putFloat(Options.PREF_ZEROED_PRESSURE, (float) zeroedPressure).apply();
 		if (locationListener != null) {
 			locationManager.removeUpdates(locationListener);
 			locationListener = null;
@@ -422,6 +435,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		if (!haveAllPermissions())
 			return;
 
+		zeroedPressure = options.getFloat(Options.PREF_ZEROED_PRESSURE, (float) standardPressureAtSeaLevel);
 		showPressure = options.getBoolean(Options.PREF_SHOW_PRESSURE, true);
 		showAltitude = options.getBoolean(Options.PREF_SHOW_ALTITUDE, true);
 		showGraph = options.getBoolean(Options.PREF_SHOW_GRAPH, true);
@@ -499,13 +513,17 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
 	}
 
+	public void onZero(View view) {
+		zeroedPressure = lastPressure;
+	}
+
 	static final class DistanceDatum {
 		long tMillis;
-		double distance;
+		double pressure;
 
 		public DistanceDatum(long _tMillis, double _distance) {
 			tMillis = _tMillis;
-			distance = _distance;
+			pressure = _distance;
 		}
 	}
  }

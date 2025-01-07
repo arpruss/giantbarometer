@@ -1,0 +1,31 @@
+apply plugin: 'com.android.application'
+
+android {
+    //noinspection GradleCompatible
+    compileSdkVersion 34
+    buildToolsVersion "30.0.3"
+
+    defaultConfig {
+        applicationId "mobi.omegacentauri.giantbarometer"
+        minSdkVersion 21
+        //noinspection ExpiredTargetSdkVersion
+        targetSdkVersion 34
+    }
+
+    lintOptions {
+        checkReleaseBuilds false
+        //If you want to continue even if errors found use following line
+        abortOnError false
+    }
+
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+            debug {
+                debuggable false
+            }
+        }
+    }
+}

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   height="48"
+   viewBox="0 96 960 960"
+   width="48"
+   version="1.1"
+   id="svg4"
+   sodipodi:docname="bluetooth.svg"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
+   inkscape:export-filename="bluetooth.png"
+   inkscape:export-xdpi="1024"
+   inkscape:export-ydpi="1024"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <metadata
+     id="metadata10">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs8" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1920"
+     inkscape:window-height="1001"
+     id="namedview6"
+     showgrid="false"
+     inkscape:zoom="9.8333334"
+     inkscape:cx="24"
+     inkscape:cy="24"
+     inkscape:window-x="-11"
+     inkscape:window-y="-11"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg4"
+     inkscape:showpageshadow="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#d1d1d1" />
+  <path
+     style="fill:none;stroke:#ffffff;stroke-width:75.5905512;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none"
+     d="M 183.80923,279.80923 776.19077,872.19077"
+     id="path1" />
+  <path
+     style="fill:none;stroke:#ffffff;stroke-width:75.5905512;stroke-linecap:round;stroke-linejoin:bevel;stroke-dasharray:none"
+     d="M 776.19077,279.80923 183.80924,872.19077"
+     id="path2" />
+</svg>

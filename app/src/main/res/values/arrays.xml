@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="formula_labels">
+        <item>Fox: 220&#x2212;age</item>
+        <item>HUNT: 211&#x2212;0.64&#215;age</item>
+        <item>Tanaka: 208&#x2212;0.7&#215;age</item>
+    </string-array>
+    <string-array name="formulas" >
+        <item>fox</item>
+        <item>hunt</item>
+        <item>tanaka</item>
+    </string-array>
+</resources>

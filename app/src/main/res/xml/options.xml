@@ -27,6 +27,11 @@
         android:entries="@array/altitudeUnits"
         android:entryValues="@array/altitudeUnits"
         android:defaultValue="meters"/>
+    <ListPreference android:title="Smoothing"
+        android:key="smoothing"
+        android:entries="@array/smoothingMethods"
+        android:entryValues="@array/smoothingMethodValues"
+        android:defaultValue="med3000"/>
     <PreferenceCategory android:title="Licenses and Copyrights">
     <Preference android:key="license" android:title="View Licenses and Copyrights"/>
     </PreferenceCategory>

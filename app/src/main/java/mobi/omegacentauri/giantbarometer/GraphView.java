@@ -22,7 +22,7 @@ public class GraphView extends View {
     MiniFont miniFont;
     Paint paint;
     Paint basePaint;
-    List<BarometerActivity.DistanceDatum> data;
+    List<BarometerActivity.TimedDatum> data;
     String[] lines;
     float yOffsets[];
     float xOffsets[];
@@ -80,7 +80,7 @@ public class GraphView extends View {
         invalidate();
     }
 
-    public void setData(List<BarometerActivity.DistanceDatum> d, boolean force) {
+    public void setData(List<BarometerActivity.TimedDatum> d, boolean force) {
         data = d;
         if (force)
             invalidate();
@@ -117,9 +117,9 @@ public class GraphView extends View {
         double xStart;
         double yScale;
         double yStart;
-        xStart = data.get(0).tMillis;
+        xStart = data.get(0).time;
         int n = data.size();
-        double xEnd = data.get(n-1).tMillis;
+        double xEnd = data.get(n-1).time;
         if (xStart == xEnd) {
             xScale = 1;
         }
@@ -128,11 +128,11 @@ public class GraphView extends View {
         }
         yStart = Double.POSITIVE_INFINITY;
         double maxY = Double.NEGATIVE_INFINITY;
-        for (BarometerActivity.DistanceDatum d : data) {
-            if (d.pressure < yStart)
-                yStart = d.pressure;
-            if (maxY < d.pressure)
-                maxY = d.pressure;
+        for (BarometerActivity.TimedDatum d : data) {
+            if (d.value < yStart)
+                yStart = d.value;
+            if (maxY < d.value)
+                maxY = d.value;
         }
         if (yStart < maxY) {
             yScale = h / (maxY - yStart);
@@ -144,9 +144,9 @@ public class GraphView extends View {
         double prevX = 0;
         double prevY = 0;
         boolean first = true;
-        for(BarometerActivity.DistanceDatum d : data) {
-            double x = (d.tMillis - xStart) * xScale;
-            double y = (d.pressure - yStart) * yScale;
+        for(BarometerActivity.TimedDatum d : data) {
+            double x = (d.time - xStart) * xScale;
+            double y = (d.value - yStart) * yScale;
             if (!first) {
                 if (x-prevX >= graphPixelMin) {
                     canvas.drawLine((float) prevX, (float) (h - 1 - prevY), (float) x, (float) (h - 1 - y), paint);

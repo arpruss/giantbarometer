@@ -29,8 +29,11 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import java.sql.Time;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 
 
 public class BarometerActivity extends Activity implements SensorEventListener {
@@ -45,6 +48,8 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	Handler buttonHideHandler;
 	static final long initialTimeout = 40000;
 	static final long periodicTimeout = 20000;
+
+	static final long maximumKeep = 20*1000;
 	boolean works;
 
 
@@ -57,7 +62,8 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	private Runnable buttonHideRunnable;
 	private static final long buttonHideTime = 8000;
 
-	List<DistanceDatum> data = new ArrayList<>();
+	List<TimedDatum> altitudeData = new ArrayList<>();
+	RecentData recentPressures = new RecentData(maximumKeep);
 	private GraphView graphView;
 	private SharedPreferences options;
 	private SensorManager sensorManager;
@@ -78,6 +84,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	private static final double standardPressureAtSeaLevel = 1013.25;
 	double zeroedPressure = standardPressureAtSeaLevel;
 	double lastPressure = standardPressureAtSeaLevel;
+	private String smoothing = "none";
 
 	boolean haveLocationPermission() {
 		if(true) return true;
@@ -168,7 +175,8 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		toolbarView =findViewById(R.id.toolbar);
 		buttonHideHandler = new Handler();
 //		showButtons();
-		data.clear();
+		altitudeData.clear();
+		recentPressures.clear();
 
 		sensorManager = (SensorManager) getSystemService(Service.SENSOR_SERVICE);
 		sensorManager.registerListener(this,
@@ -335,16 +343,22 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
     public void showValue(long tMillis, double pressure) {
 		if (pressure > 0) {
+			TimedDatum datum = new TimedDatum(tMillis, pressure);
 			lastPressure = pressure;
+			recentPressures.add(datum);
 			if (showPressure)
 				pressureText.setText(formatPressure(pressure));
 			if (!calibration.equals("nws") || pressureAtSeaLevel >= 0 || System.currentTimeMillis() > startTime+10000) {
-				double alt = calculateAltitude(pressure);
+				double alt;
+				if (smoothing.equals("none"))
+					alt = calculateAltitude(pressure);
+				else
+					alt = calculateAltitude(recentPressures.smooth(smoothing));
 				if (showAltitude)
 					altitudeText.setText(formatAltitude(alt));
-				data.add(new DistanceDatum(tMillis, alt));
+				altitudeData.add(new TimedDatum(tMillis, alt));
 				if (showGraph)
-					graphView.setData(data, true);
+					graphView.setData(altitudeData, true);
 			}
 //			Log.v("GiantBarometer", ""+pressure+" "+alt);
 		}
@@ -442,6 +456,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		pressureUnits = options.getString(Options.PREF_PRESSURE_UNITS, "hPa");
 		altitudeUnits = options.getString(Options.PREF_ALTITUDE_UNITS, "meters");
 		calibration = options.getString(Options.PREF_CALIBRATION, "nws");
+		smoothing = options.getString(Options.PREF_SMOOTHING, "med2000");
 
 		pressureText.setVisibility(showPressure ? View.VISIBLE : View.GONE);
 		altitudeText.setVisibility(showAltitude ? View.VISIBLE : View.GONE);
@@ -490,8 +505,8 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	}
 
     public void onResetGraph(View view) {
-		data.clear();
-		graphView.setData(data, true);
+		altitudeData.clear();
+		graphView.setData(altitudeData, true);
 //		updateCache(false);
 //		finish();
 //		final Intent i = new Intent();
@@ -517,14 +532,105 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		zeroedPressure = lastPressure;
 	}
 
-	static final class DistanceDatum {
-		long tMillis;
-		double pressure;
 
-		public DistanceDatum(long _tMillis, double _distance) {
-			tMillis = _tMillis;
-			pressure = _distance;
+	static final class RecentData {
+		LinkedList<TimedDatum> recent = new LinkedList<>(); // kept sorted by value for medians
+		long timeToKeep = 100*1000;
+
+		RecentData(long keep) {
+			timeToKeep = keep;
 		}
+
+		void clear() {
+			recent.clear();
+		}
+
+		TimedDatum latest() {
+			if (recent.isEmpty())
+				return null;
+
+			long latest = Long.MIN_VALUE;
+			TimedDatum best = null;
+			ListIterator<TimedDatum> iterator = recent.listIterator();
+			while (iterator.hasNext()) {
+				TimedDatum node = iterator.next();
+				if (node.time > latest) {
+					best = node;
+					latest = node.time;
+				}
+			}
+			return best;
+		}
+
+		void add(TimedDatum datum) {
+			long now = datum.time;
+			ListIterator<TimedDatum> iterator = recent.listIterator();
+			long cutoff = now - timeToKeep;
+			boolean added = false;
+			while (iterator.hasNext()) {
+				TimedDatum node = iterator.next();
+				if (node.time < cutoff)
+					iterator.remove();
+				else if (!added && datum.value <= node.value) {
+					iterator.previous();
+					iterator.add(datum);
+					added = true;
+					break;
+				}
+			}
+			if (!added)
+				iterator.add(datum);
+		}
+
+		public double smooth(String smoothing) {
+			TimedDatum latest = latest();
+			if (latest == null)
+				return Double.NaN;
+			if (smoothing.startsWith("med")) {
+				long cutoff = latest.time - Long.parseLong(smoothing.substring(3));
+				ArrayList<Double> selected = new ArrayList<>();
+				for (TimedDatum datum : recent) {
+					if (datum.time >= cutoff)
+						selected.add(datum.value);
+				}
+				int n = selected.size();
+				if (n % 2 != 0) {
+					return selected.get(n/2);
+				}
+				else {
+					return (selected.get(n/2-1) + selected.get(n/2)) / 2.;
+				}
+			}
+			else if (smoothing.startsWith("avg")) {
+				long cutoff = latest.time - Long.parseLong(smoothing.substring(3));
+				double sum = 0;
+				long count = 0;
+				ListIterator<TimedDatum> iterator = recent.listIterator();
+				while (iterator.hasNext()) {
+					TimedDatum node = iterator.next();
+					if (node.time >= cutoff) {
+						sum += node.value;
+						count ++;
+					}
+				}
+				return sum/count;
+			}
+			else {
+				return latest.value;
+			}
+		}
+	}
+
+	static final class TimedDatum {
+		long time;
+
+		double value;
+
+		public TimedDatum(long t, double y) {
+			time = t;
+			value = y;
+		}
+
 	}
  }
 

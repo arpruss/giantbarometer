@@ -19,8 +19,11 @@ import java.net.URLConnection;
 public class NOAA {
     double pressureAtSeaLevel;
     double temperature;
+
+    long time;
     static final int readTimeout = 10000;
     static final int connectTimeout = 10000;
+
     public boolean getData(Location location) {
         try {
             JSONObject pointsData = fetchJSON(String.format("https://api.weather.gov/points/%.4f,%.4f",location.getLatitude(),location.getLongitude()));
@@ -30,7 +33,6 @@ public class NOAA {
 
             JSONObject properties = (JSONObject)pointsData.get("properties");
             String stationsURL = properties.getString("observationStations");
-            Log.v("GiantBarometer", "stations: "+stationsURL);
             JSONObject stationsList = fetchJSON(stationsURL);
             JSONArray features = stationsList.getJSONArray("features");
             boolean success = false;
@@ -46,10 +48,9 @@ public class NOAA {
                     JSONObject observationProperties = fetchJSON(observationsURL).getJSONObject("properties");
                     if (observationProperties == null)
                         continue;
-//                    pressureAtSeaLevel = observationProperties.getJSONObject("barometricPressure").getDouble("value")/100.;
                     pressureAtSeaLevel = observationProperties.getJSONObject("barometricPressure").getDouble("value")/100.;
                     temperature = 273.15 + observationProperties.getJSONObject("temperature").getDouble("value");
-                    Log.v("GiantBarometer", "pressureAtSeaLevel "+pressureAtSeaLevel+" temp "+temperature);
+                    time = System.currentTimeMillis();
                     return true;
                 }
                 catch (JSONException e) {

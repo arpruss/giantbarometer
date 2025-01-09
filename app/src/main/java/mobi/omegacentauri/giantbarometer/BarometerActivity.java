@@ -29,11 +29,8 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-import java.sql.Time;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 
 
 public class BarometerActivity extends Activity implements SensorEventListener {
@@ -42,6 +39,8 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
     private static final long WAIT_TIME = 6000; // only show invalid value after this amount of waiting
 	double pressureAtSeaLevel = -1;
+	private static final long lastLapCountTime = -1;
+	private static final long LAP_COUNT_TIME = 2000;
 	long lastPressureUpdate = -1;
     static public long lastValidTime = -WAIT_TIME;
 //	Handler timeoutHandler;
@@ -62,8 +61,9 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	private Runnable buttonHideRunnable;
 	private static final long buttonHideTime = 8000;
 
-	List<TimedDatum> altitudeData = new ArrayList<>();
-	RecentData recentPressures = new RecentData(maximumKeep);
+	List<Analysis.TimedDatum<Double>> altitudeData = new ArrayList<>();
+	List<Analysis.TimedDatum<Observations>> observations = new ArrayList<>();
+	Analysis.RecentData recentPressures = new Analysis.RecentData(maximumKeep);
 	private GraphView graphView;
 	private SharedPreferences options;
 	private SensorManager sensorManager;
@@ -85,11 +85,16 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	double zeroedPressure = standardPressureAtSeaLevel;
 	double lastPressure = standardPressureAtSeaLevel;
 	private String smoothing = "none";
+	private NOAA lastStationData = null;
+	private boolean showLapCount;
+	private BigTextView lapCountText;
+
+	boolean ready = false;
+	private boolean initialized = false;
 
 	boolean haveLocationPermission() {
-		if(true) return true;
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-			return PackageManager.PERMISSION_GRANTED == checkSelfPermission("android.permission.ACCESS_FINE_LOCATION");
+			return PackageManager.PERMISSION_GRANTED == checkSelfPermission("android.permission.ACCESS_COARSE_LOCATION");
 		}
 		else {
 			return true;
@@ -110,12 +115,15 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	}
 
 	@Override
-	public void onRequestPermissionsResult (int requestCode,
+	public void onRequestPermissionsResult(int requestCode,
 											String[] permissions,
 											int[] grantResults) {
 		boolean haveAll = true;
+		Log.v("GiantBarometer", "permissions request result");
 		for (int i=0; i<permissions.length; i++) {
 			if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
+				haveAll = false;
+				Log.e("GiantBarometer", "permissions denied");
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
 					finishAffinity();
 				} else {
@@ -125,14 +133,14 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		}
 	}
 	public boolean assurePermissions() {
-		if (true) return true;
+//		if (true) return true;
 
 		boolean l = haveLocationPermission();
 		if (!l) {
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 				ArrayList<String> permissions = new ArrayList<>();
 				if (!l)
-					permissions.add("android.permission.ACCESS_FINE_LOCATION");
+					permissions.add("android.permission.ACCESS_COARSE_LOCATION");
 				String[] pp = new String[permissions.size()];
 				permissions.toArray(pp);
 				for (String p : pp)
@@ -152,16 +160,6 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		super.onCreate(savedInstanceState);
 		options = PreferenceManager.getDefaultSharedPreferences(this);
 
-		noaa = new NOAA();
-
-		if (! getPackageManager().hasSystemFeature(PackageManager.FEATURE_SENSOR_BAROMETER)) {
-			Toast.makeText(this, "Device has no barometer", Toast.LENGTH_LONG).show();
-			finish();
-			return;
-		}
-		if (!assurePermissions())
-			return;
-
 		setContentView(R.layout.heart);
 		getActionBar().hide();
 		if (options.getBoolean(Options.PREF_SCREEN_ON, false))
@@ -170,6 +168,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 			getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		pressureText = (BigTextView) findViewById(R.id.pressure);
 		altitudeText = (BigTextView) findViewById(R.id.altitude);
+		lapCountText = (BigTextView) findViewById(R.id.laps);
 		graphView = (GraphView) findViewById(R.id.graph);
 		works = false;
 		toolbarView =findViewById(R.id.toolbar);
@@ -177,51 +176,19 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 //		showButtons();
 		altitudeData.clear();
 		recentPressures.clear();
-
-		sensorManager = (SensorManager) getSystemService(Service.SENSOR_SERVICE);
-		sensorManager.registerListener(this,
-				sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE),
-				SensorManager.SENSOR_DELAY_NORMAL);
-
-//		timeoutHandler = new Handler();
-//		periodicTimeoutRunnable = new Runnable() {
-//			@Override
-//			public void run() {
-//				pressureText.setText(" ? ");
-//				timeoutHandler.postDelayed(periodicTimeoutRunnable, periodicTimeout);
-//			}
-//		};
-		/*
-		standardPressureHandler = new Handler();
-		standardPressureTimeoutRunnable = new Runnable() {
-			@Override
-			public void run() {
-				AsyncTask.execute(new Runnable() {
-					@Override
-					public void run() {
-						updateStandardPressure();
-					}
-				});
-				standardPressureHandler.postDelayed(standardPressureTimeoutRunnable, standardPressureTimeout);
-			}
-		};
-		standardPressureHandler.postDelayed(standardPressureTimeoutRunnable, 0); */
-
 	}
 
 	private void updateStandardPressure(Location location) {
 		long t = System.currentTimeMillis();
-//		Log.v("GiantBarometer", ""+location+" "+lastPressureUpdate+" "+t);
 
 		if (lastPressureUpdate < 0 || t >= lastPressureUpdate + standardPressureTimeout) {
-//			Log.v("GiantBarometer", "updating");
 			lastPressureUpdate = System.currentTimeMillis();
 			AsyncTask.execute(new Runnable() {
 				@Override
 				public void run() {
+					NOAA noaa = new NOAA();
 					if (noaa.getData(location)) {
-						setPressureAtSeaLevel(noaa.pressureAtSeaLevel);
-						setTemperature(noaa.temperature);
+						setStationData(noaa);
 					}
 				}
 			});
@@ -230,12 +197,10 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
 	}
 
-	private synchronized void setPressureAtSeaLevel(double pressure) {
-		pressureAtSeaLevel = pressure;
-	}
-
-	private synchronized void setTemperature(double t) {
-		temperature = t;
+	private synchronized void setStationData(NOAA noaa) {
+		lastStationData = noaa;
+		pressureAtSeaLevel = noaa.pressureAtSeaLevel;
+		temperature = noaa.temperature;
 	}
 
 	@Override
@@ -343,9 +308,10 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
     public void showValue(long tMillis, double pressure) {
 		if (pressure > 0) {
-			TimedDatum datum = new TimedDatum(tMillis, pressure);
+			Analysis.TimedDatum datum = new Analysis.TimedDatum(tMillis, pressure);
 			lastPressure = pressure;
 			recentPressures.add(datum);
+			observations.add(new Analysis.TimedDatum<Observations>(tMillis, new Observations(pressure, lastStationData)));
 			if (showPressure)
 				pressureText.setText(formatPressure(pressure));
 			if (!calibration.equals("nws") || pressureAtSeaLevel >= 0 || System.currentTimeMillis() > startTime+10000) {
@@ -356,9 +322,13 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 					alt = calculateAltitude(recentPressures.smooth(smoothing));
 				if (showAltitude)
 					altitudeText.setText(formatAltitude(alt));
-				altitudeData.add(new TimedDatum(tMillis, alt));
+				altitudeData.add(new Analysis.TimedDatum(tMillis, alt));
 				if (showGraph)
 					graphView.setData(altitudeData, true);
+			}
+			if (showLapCount && lastLapCountTime + LAP_COUNT_TIME <= System.currentTimeMillis()) {
+				lapCountText.setText(""+(new Analysis(altitudeData).countLaps()));
+
 			}
 //			Log.v("GiantBarometer", ""+pressure+" "+alt);
 		}
@@ -432,13 +402,23 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	public void onPause() {
 		super.onPause();
 
+		Log.v("GiantBarometer", "onpause");
+
+		if (!initialized)
+			return;
+
+		try {
+			sensorManager.unregisterListener(this);
+		}
+		catch(Exception e) {
+
+		}
 		if (calibration.equals("relative"))
 			options.edit().putFloat(Options.PREF_ZEROED_PRESSURE, (float) zeroedPressure).apply();
 		if (locationListener != null) {
 			locationManager.removeUpdates(locationListener);
 			locationListener = null;
 		}
-//		timeoutHandler.removeCallbacksAndMessages(null);
 	}
 
 	@SuppressLint("MissingPermission")
@@ -446,13 +426,31 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	public void onResume() {
 		super.onResume();
 
-		if (!haveAllPermissions())
+		initialized = false;
+
+		if (! getPackageManager().hasSystemFeature(PackageManager.FEATURE_SENSOR_BAROMETER)) {
+			Toast.makeText(this, "Device has no barometer", Toast.LENGTH_LONG).show();
+			finish();
 			return;
+		}
+		if (!assurePermissions()) {
+			return;
+		}
+
+		if (!haveAllPermissions()) {
+			Log.v("GiantBarometer", "missing permissions");
+//			finish();
+			return;
+		}
+
+		Log.v("GiantBarometer", "resuming with permissions");
 
 		zeroedPressure = options.getFloat(Options.PREF_ZEROED_PRESSURE, (float) standardPressureAtSeaLevel);
 		showPressure = options.getBoolean(Options.PREF_SHOW_PRESSURE, true);
 		showAltitude = options.getBoolean(Options.PREF_SHOW_ALTITUDE, true);
 		showGraph = options.getBoolean(Options.PREF_SHOW_GRAPH, true);
+		showLapCount = options.getBoolean(Options.PREF_LAP_COUNT, false);
+		calibration = options.getString(Options.PREF_CALIBRATION, "nws");
 
 		boolean invalidateData = false;
 		String s = options.getString(Options.PREF_PRESSURE_UNITS, "hPa");
@@ -460,11 +458,12 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 			invalidateData = true;
 			pressureUnits = s;
 		}
-		s = options.getString(Options.PREF_ALTITUDE_UNITS, "meters");
-		if (!s.equals(altitudeUnits)) {
-			invalidateData = true;
-			altitudeUnits = s;
-		}
+		altitudeUnits = options.getString(Options.PREF_ALTITUDE_UNITS, "meters");
+		if (altitudeUnits.equals("meters"))
+			graphView.setValueScale(1.);
+		else // feet
+			graphView.setValueScale(1./3.280839895);
+
 		s = options.getString(Options.PREF_CALIBRATION, "nws");
 		if (!s.equals(calibration)) {
 			invalidateData = true;
@@ -477,23 +476,21 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
 		pressureText.setVisibility(showPressure ? View.VISIBLE : View.GONE);
 		altitudeText.setVisibility(showAltitude ? View.VISIBLE : View.GONE);
+		lapCountText.setVisibility(showLapCount ? View.VISIBLE : View.GONE);
 		graphView.setVisibility(showGraph ? View.VISIBLE : View.GONE);
 
 		setOrientation();
 		setFullScreen();
 		showButtons();
 
-//		timeoutHandler.removeCallbacksAndMessages(null);
-//		timeoutHandler.postDelayed(new Runnable() {
-//			@Override
-//			public void run() {
-////				updateCache(false);
-//				Log.e("hrshow", "cannot connect");
-//				finish();
-//			}
-//		}, initialTimeout);
         showValue(0,-1);
-        lastValidTime = -WAIT_TIME;
+
+		sensorManager = (SensorManager) getSystemService(Service.SENSOR_SERVICE);
+		sensorManager.registerListener(this,
+				sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE),
+				SensorManager.SENSOR_DELAY_NORMAL);
+
+		lastValidTime = -WAIT_TIME;
 		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		startTime = System.currentTimeMillis();
 		if (calibration.equals("nws")) {
@@ -511,10 +508,12 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		else {
 			locationListener = null;
 		}
+
+		Log.v("GiantBarometer", "running");
+		initialized = true;
 	}
 
 	public void onSettingsClick(View view) {
-//		updateCache(false);
 		final Intent i = new Intent();
 		i.setClass(this, Options.class);
 		startActivity(i);
@@ -522,16 +521,13 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
     public void onResetGraph(View view) {
 		altitudeData.clear();
+		observations.clear();
 		graphView.setData(altitudeData, true);
-//		updateCache(false);
-//		finish();
-//		final Intent i = new Intent();
-//		i.setClass(this, DeviceScanActivity.class);
-//		startActivity(i);
     }
 
 	@Override
 	public void onSensorChanged(SensorEvent event) {
+		Log.v("GiantBarometer", "sensor "+event);
 		if (event.sensor.getType() == Sensor.TYPE_PRESSURE) {
 			float v = event.values[0];
 			if (v >= 0)
@@ -550,104 +546,14 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	}
 
 
-	static final class RecentData {
-		LinkedList<TimedDatum> recent = new LinkedList<>(); // kept sorted by value for medians
-		long timeToKeep = 100*1000;
+	static final class Observations {
+		double pressure;
+		NOAA stationData;
 
-		RecentData(long keep) {
-			timeToKeep = keep;
+		Observations(double _pressure, NOAA _stationData) {
+			pressure = _pressure;
+			stationData = _stationData;
 		}
-
-		void clear() {
-			recent.clear();
-		}
-
-		TimedDatum latest() {
-			if (recent.isEmpty())
-				return null;
-
-			long latest = Long.MIN_VALUE;
-			TimedDatum best = null;
-			ListIterator<TimedDatum> iterator = recent.listIterator();
-			while (iterator.hasNext()) {
-				TimedDatum node = iterator.next();
-				if (node.time > latest) {
-					best = node;
-					latest = node.time;
-				}
-			}
-			return best;
-		}
-
-		void add(TimedDatum datum) {
-			long now = datum.time;
-			ListIterator<TimedDatum> iterator = recent.listIterator();
-			long cutoff = now - timeToKeep;
-			boolean added = false;
-			while (iterator.hasNext()) {
-				TimedDatum node = iterator.next();
-				if (node.time < cutoff)
-					iterator.remove();
-				else if (!added && datum.value <= node.value) {
-					iterator.previous();
-					iterator.add(datum);
-					added = true;
-					break;
-				}
-			}
-			if (!added)
-				iterator.add(datum);
-		}
-
-		public double smooth(String smoothing) {
-			TimedDatum latest = latest();
-			if (latest == null)
-				return Double.NaN;
-			if (smoothing.startsWith("med")) {
-				long cutoff = latest.time - Long.parseLong(smoothing.substring(3));
-				ArrayList<Double> selected = new ArrayList<>();
-				for (TimedDatum datum : recent) {
-					if (datum.time >= cutoff)
-						selected.add(datum.value);
-				}
-				int n = selected.size();
-				if (n % 2 != 0) {
-					return selected.get(n/2);
-				}
-				else {
-					return (selected.get(n/2-1) + selected.get(n/2)) / 2.;
-				}
-			}
-			else if (smoothing.startsWith("avg")) {
-				long cutoff = latest.time - Long.parseLong(smoothing.substring(3));
-				double sum = 0;
-				long count = 0;
-				ListIterator<TimedDatum> iterator = recent.listIterator();
-				while (iterator.hasNext()) {
-					TimedDatum node = iterator.next();
-					if (node.time >= cutoff) {
-						sum += node.value;
-						count ++;
-					}
-				}
-				return sum/count;
-			}
-			else {
-				return latest.value;
-			}
-		}
-	}
-
-	static final class TimedDatum {
-		long time;
-
-		double value;
-
-		public TimedDatum(long t, double y) {
-			time = t;
-			value = y;
-		}
-
 	}
  }
 

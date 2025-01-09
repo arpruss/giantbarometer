@@ -27,6 +27,15 @@
             android:padding="0sp"
             android:textSize="50sp"
             />
+        <mobi.omegacentauri.giantbarometer.BigTextView
+            android:id="@+id/laps"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:padding="0sp"
+            android:textSize="50sp"
+            />
 
     <mobi.omegacentauri.giantbarometer.GraphView
         android:id="@+id/graph"

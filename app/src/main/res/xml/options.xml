@@ -14,6 +14,9 @@
     <CheckBoxPreference android:title="Show altitude"
         android:key="showAltitude"
         android:defaultValue="true"/>
+    <CheckBoxPreference android:title="Show lap count"
+        android:key="lapCount"
+        android:defaultValue="false"/>
     <CheckBoxPreference android:title="Show altitude graph"
         android:key="showGraph"
         android:defaultValue="true"/>

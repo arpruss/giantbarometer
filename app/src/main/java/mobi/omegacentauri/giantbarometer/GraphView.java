@@ -8,7 +8,6 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 
@@ -27,11 +26,11 @@ public class GraphView extends View {
 
     Paint labelPaint;
     Paint hLinePaint;
-    List<BarometerActivity.TimedDatum> data;
+    List<Analysis.TimedDatum<Double>> data;
     String[] lines;
     float yOffsets[];
     float xOffsets[];
-    float scale = 0.98f;
+    double valueScale = 1.;
     static final float BASE_FONT_SIZE = 50f;
     private float maxAspect = 1f;
 
@@ -68,15 +67,12 @@ public class GraphView extends View {
         setData(null, true);
     }
 
-    public void setMaxAspect(float maxAspect) {
-        if (this.maxAspect != maxAspect) {
-            this.maxAspect = maxAspect;
-            invalidate();
-        }
+    public void setValueScale(double s) {
+        valueScale = s;
     }
 
 
-    public void setData(List<BarometerActivity.TimedDatum> d, boolean force) {
+    public void setData(List<Analysis.TimedDatum<Double>> d, boolean force) {
         data = d;
         if (force)
             invalidate();
@@ -124,11 +120,12 @@ public class GraphView extends View {
         }
         yStart = Double.POSITIVE_INFINITY;
         double yEnd = Double.NEGATIVE_INFINITY;
-        for (BarometerActivity.TimedDatum d : data) {
-            if (d.value < yStart)
-                yStart = d.value;
-            if (yEnd < d.value)
-                yEnd = d.value;
+        for (Analysis.TimedDatum<Double> d : data) {
+            double y = d.value * valueScale;
+            if (y < yStart)
+                yStart = y;
+            if (yEnd < y)
+                yEnd = y;
         }
         yStart = Math.floor(yStart);
         yEnd = Math.ceil(yEnd);
@@ -139,9 +136,9 @@ public class GraphView extends View {
         double prevX = 0;
         double prevY = 0;
         boolean first = true;
-        for(BarometerActivity.TimedDatum d : data) {
+        for(Analysis.TimedDatum<Double> d : data) {
             double x = (d.time - xStart) * xScale;
-            double y = (d.value - yStart) * yScale;
+            double y = (d.value * valueScale - yStart) * yScale;
             if (!first) {
                 if (x-prevX >= graphPixelMin) {
                     canvas.drawLine((float) prevX, (float) (h - 1 - prevY), (float) x, (float) (h - 1 - y), paint);

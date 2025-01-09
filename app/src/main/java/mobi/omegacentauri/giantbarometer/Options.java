@@ -35,6 +35,7 @@ public class Options extends PreferenceActivity {
     public static final String PREF_CALIBRATION = "calibration";
     public static final String PREF_ZEROED_PRESSURE = "zeroedPressure";
     public static final String PREF_SMOOTHING = "smoothing";
+    public static final String PREF_LAP_COUNT = "lapCount";
     private SharedPreferences.OnSharedPreferenceChangeListener listener;
     private SharedPreferences options;
 

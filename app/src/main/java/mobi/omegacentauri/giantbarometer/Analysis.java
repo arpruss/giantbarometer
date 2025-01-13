@@ -11,7 +11,8 @@ import java.util.ListIterator;
 public class Analysis {
     private static final double MIN_HALF_LAP_HEIGHT = 1.5;
     List<TimedDatum<Double>> rawData;
-    List<TimedDatum<Double>> filteredData;
+    double filteredData[];
+    int filteredDataCount;
     static final double RISE_TOLERANCE = 0.35;
     static final double HALF_LAP_TOLERANCE = 0.3;
     int ascents;
@@ -21,9 +22,8 @@ public class Analysis {
     }
 
     public int countLaps() {
-        List<TimedDatum<Double>> d = spacingFilter(rawData, 0.5);
-        filteredData = medianFilter(d, 3.5);
-        if (filteredData.size() < 3)
+        filter(rawData, 3.5, 500);
+        if (filteredDataCount < 3)
             return 0;
         double rise = getRise( 1, RISE_TOLERANCE);
         double fall = getRise(-1, RISE_TOLERANCE);
@@ -37,14 +37,49 @@ public class Analysis {
         return Math.min(ascents,descents);
     }
 
+    private void filter(List<TimedDatum<Double>> d, double windowSize, long spacing) {
+        LinkedList<TimedDatum<Double>> window = new LinkedList<>();
+        long previousTime = Integer.MIN_VALUE;
+        filteredData = new double[d.size()];
+        int pos = 0;
+        for (TimedDatum<Double> datum : d) {
+            // keep the window sorted
+            double cutoff = datum.time - windowSize;
+            ListIterator<TimedDatum<Double>> iterator = window.listIterator();
+            boolean added = false;
+            while (iterator.hasNext()) {
+                TimedDatum<Double> node = iterator.next();
+                if (node.time < cutoff)
+                    iterator.remove();
+                else if (!added && datum.value <= node.value) {
+                    iterator.previous();
+                    iterator.add(datum);
+                    added = true;
+                    break;
+                }
+            }
+            if (!added)
+                iterator.add(datum);
+            if (datum.time >= previousTime + spacing) {
+                int n = window.size();
+                if (n % 2 != 0) {
+                    filteredData[pos] = window.get(n / 2).value;
+                } else {
+                    filteredData[pos] = (window.get(n / 2 - 1).value + window.get(n / 2).value) / 2;
+                }
+                pos++;
+            }
+        }
+        filteredDataCount = pos;
+    }
+
     private void countAscentsAndDescents(double height, double halfLapTolerance) {
         ascents = 0;
         descents = 0;
         int direction = 0;
-        double lastCriticalPoint = filteredData.get(0).value;
-        int n = filteredData.size();
-        for (int i = 1 ; i < n ; i++) {
-            double y = filteredData.get(i).value;
+        double lastCriticalPoint = filteredData[0];
+        for (int i = 1 ; i < filteredDataCount ; i++) {
+            double y = filteredData[i];
             if (Math.abs(y-lastCriticalPoint) > (1.-halfLapTolerance)*height) {
                 if (y > lastCriticalPoint) {
                     ascents++;
@@ -67,26 +102,25 @@ public class Analysis {
 
     double getRise(double scale, double fallTolerance) {
         // calculate rise from absolute minimum, allowing for some falls
-        int n = filteredData.size();
         int minPos = -1;
         double minimum = Double.POSITIVE_INFINITY;
-        for (int i = 0 ; i < n; i++) {
-            double y = filteredData.get(i).value * scale;
+        for (int i = 0 ; i < filteredDataCount; i++) {
+            double y = filteredData[i] * scale;
             if (y < minimum) {
                 minPos = i;
                 minimum = y;
             }
         }
         Log.v("GiantBarometer", "minPos "+minPos+" minimum "+minimum);
-        int direction = minPos <= n/2 ? 1 : -1;
-        int end = direction == -1 ? 0 : n - 1;
+        int direction = minPos <= filteredDataCount/2 ? 1 : -1;
+        int end = direction == -1 ? 0 : filteredDataCount - 1;
         int pos = minPos;
 //        int peakCandidatePos = pos;
         double peakCandidateHeight = minimum;
         double biggestSoFar = minimum;
         double biggestFall = 0;
         while (pos != end) {
-            double y = filteredData.get(pos).value * scale;
+            double y = filteredData[pos] * scale;
             if (y > biggestSoFar) {
                 biggestSoFar = y;
                 if ((y-minimum) > biggestFall * fallTolerance) {
@@ -100,49 +134,6 @@ public class Analysis {
             pos += direction;
         }
         return peakCandidateHeight - minimum;
-    }
-
-    private List<TimedDatum<Double>> medianFilter(List<TimedDatum<Double>> data, double windowSize) {
-        LinkedList<TimedDatum<Double>> window = new LinkedList<>();
-        ArrayList<TimedDatum<Double>> out = new ArrayList<>();
-        for (TimedDatum<Double> datum : data) {
-            double cutoff = datum.time - windowSize;
-            ListIterator<TimedDatum<Double>> iterator = window.listIterator();
-            boolean added = false;
-            while (iterator.hasNext()) {
-                TimedDatum<Double> node = iterator.next();
-                if (node.time < cutoff)
-                    iterator.remove();
-                else if (!added && datum.value <= node.value) {
-                    iterator.previous();
-                    iterator.add(datum);
-                    added = true;
-                    break;
-                }
-            }
-            if (!added)
-                iterator.add(datum);
-            int n = window.size();
-            if (n % 2 != 0) {
-                out.add(new TimedDatum<Double>(datum.time, window.get(n/2).value));
-            }
-            else {
-                out.add(new TimedDatum<Double>(datum.time, (window.get(n/2-1).value+window.get(n/2).value)/2));
-            }
-        }
-        return out;
-    }
-
-    private List<TimedDatum<Double>> spacingFilter(List<TimedDatum<Double>> data, double spacing) {
-        ArrayList<TimedDatum<Double>> out = new ArrayList<>();
-        double prevTime = Double.NEGATIVE_INFINITY;
-        int count = data.size();
-        for (TimedDatum<Double> d : data) {
-            if (d.time - spacing >= prevTime || count == 1)
-                out.add(d);
-            count--;
-        }
-        return out;
     }
 
     static final class TimedDatum<T> {

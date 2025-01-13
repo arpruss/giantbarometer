@@ -27,21 +27,22 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
 
-
-public class BarometerActivity extends Activity implements SensorEventListener {
+public class BarometerActivity extends Activity implements SensorEventListener,LocationListener {
 	private final static String TAG = BarometerActivity.class
 			.getSimpleName();
 
     private static final long WAIT_TIME = 6000; // only show invalid value after this amount of waiting
 	double pressureAtSeaLevel = -1;
-	private static final long lastLapCountTime = -1;
+	private long lastLapCountTime = -1;
 	private static final long LAP_COUNT_TIME = 2000;
-	long lastPressureUpdate = -1;
+	private long altitudeTimeSpacing = 500;
     static public long lastValidTime = -WAIT_TIME;
 //	Handler timeoutHandler;
 	Handler buttonHideHandler;
@@ -67,12 +68,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	private GraphView graphView;
 	private SharedPreferences options;
 	private SensorManager sensorManager;
-	private Runnable standardPressureUpdateTimeout;
-	private Handler standardPressureHandler;
-	private Runnable standardPressureTimeoutRunnable;
-	private LocationListener locationListener;
 	private LocationManager locationManager;
-	private NOAA noaa;
 	private double temperature = -1;
 	private long startTime;
 	private boolean showPressure;
@@ -81,16 +77,22 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	private String pressureUnits;
 	private String altitudeUnits;
 	private String calibration;
-	private static final double standardPressureAtSeaLevel = 1013.25;
+	public static final double standardPressureAtSeaLevel = 1013.25;
 	double zeroedPressure = standardPressureAtSeaLevel;
 	double lastPressure = standardPressureAtSeaLevel;
 	private String smoothing = "none";
-	private NOAA lastStationData = null;
+	private NWS lastStationData = null;
 	private boolean showLapCount;
 	private BigTextView lapCountText;
+	private boolean barometerService;
 
 	boolean ready = false;
 	private boolean initialized = false;
+	private long lastLocationTime = Long.MIN_VALUE;
+
+	private boolean background = false;
+	private CheckBox backgroundCheckbox;
+	static final boolean useService = true;
 
 	boolean haveLocationPermission() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -160,7 +162,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		super.onCreate(savedInstanceState);
 		options = PreferenceManager.getDefaultSharedPreferences(this);
 
-		setContentView(R.layout.heart);
+		setContentView(R.layout.barometer);
 		getActionBar().hide();
 		if (options.getBoolean(Options.PREF_SCREEN_ON, false))
 			getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -170,37 +172,51 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		altitudeText = (BigTextView) findViewById(R.id.altitude);
 		lapCountText = (BigTextView) findViewById(R.id.laps);
 		graphView = (GraphView) findViewById(R.id.graph);
+		backgroundCheckbox = (CheckBox) findViewById(R.id.background);
+		backgroundCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+				Log.v("GiantBarometer", "checkbox "+isChecked);
+				background = isChecked;
+			}
+		});
 		works = false;
-		toolbarView =findViewById(R.id.toolbar);
+//		toolbarView =findViewById(R.id.toolbar);
 		buttonHideHandler = new Handler();
 //		showButtons();
 		altitudeData.clear();
 		recentPressures.clear();
 	}
 
+	@SuppressLint("MissingPermission")
+	private void requestLocation() {
+		Log.v("GiantBarometer", "request");
+		locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+				standardPressureTimeout / 3,
+				500, this);
+	}
+
 	private void updateStandardPressure(Location location) {
 		long t = System.currentTimeMillis();
 
-		if (lastPressureUpdate < 0 || t >= lastPressureUpdate + standardPressureTimeout) {
-			lastPressureUpdate = System.currentTimeMillis();
-			AsyncTask.execute(new Runnable() {
-				@Override
-				public void run() {
-					NOAA noaa = new NOAA();
-					if (noaa.getData(location)) {
-						setStationData(noaa);
-					}
+		AsyncTask.execute(new Runnable() {
+			@Override
+			public void run() {
+				NWS nws = new NWS();
+				if (nws.getData(location)) {
+					setStationData(nws);
 				}
-			});
-		}
-		else Log.v("GiantBarometer", "skipping location update");
-
+			}
+		});
 	}
 
-	private synchronized void setStationData(NOAA noaa) {
-		lastStationData = noaa;
-		pressureAtSeaLevel = noaa.pressureAtSeaLevel;
-		temperature = noaa.temperature;
+	public synchronized void setStationData(NWS nws) {
+		if (nws == null)
+			return;
+		Log.v("GiantBarometer", "updating station data "+nws.pressureAtSeaLevel+" "+nws.temperature);
+		lastStationData = nws;
+		pressureAtSeaLevel = nws.pressureAtSeaLevel;
+		temperature = nws.temperature;
 	}
 
 	@Override
@@ -210,21 +226,21 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	}
 
 	void showButtons() {
-		toolbarView.setVisibility(View.VISIBLE);
+//		toolbarView.setVisibility(View.VISIBLE);
 		findViewById(R.id.resetGraph).setVisibility(showGraph ? View.VISIBLE : View.GONE);
 		findViewById(R.id.zero).setVisibility(calibration.equals("relative") ? View.VISIBLE : View.GONE);
-		if (!isTV()) {
-			if (buttonHideRunnable == null)
-				buttonHideRunnable = new Runnable() {
-					@Override
-					public void run() {
-						toolbarView.setVisibility(View.GONE);
-						buttonHideHandler.postDelayed(periodicTimeoutRunnable, buttonHideTime);
-					}
-				};
-			buttonHideHandler.removeCallbacksAndMessages(null);
-			buttonHideHandler.postDelayed(buttonHideRunnable, buttonHideTime);
-		}
+//		if (!isTV()) {
+//			if (buttonHideRunnable == null)
+//				buttonHideRunnable = new Runnable() {
+//					@Override
+//					public void run() {
+//						toolbarView.setVisibility(View.GONE);
+//						buttonHideHandler.postDelayed(periodicTimeoutRunnable, buttonHideTime);
+//					}
+//				};
+//			buttonHideHandler.removeCallbacksAndMessages(null);
+//			buttonHideHandler.postDelayed(buttonHideRunnable, buttonHideTime);
+//		}
 	}
 
 	@Override
@@ -278,7 +294,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 	}
 
 	protected void setFullScreen() {
-		boolean fs = options.getBoolean(Options.PREF_FULLSCREEN, true);
+		boolean fs = options.getBoolean(Options.PREF_FULLSCREEN, false);
 		Window w = getWindow();
 		WindowManager.LayoutParams attrs = w.getAttributes();
 
@@ -306,7 +322,44 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		}
 	}
 
-    public void showValue(long tMillis, double pressure) {
+	public void setObservations(Analysis.TimedDatum<Observations> o) {
+		runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				_setObservations(o);
+			}
+		});
+	}
+	public void _setObservations(Analysis.TimedDatum<Observations> o) {
+		lastPressure = o.value.pressure;
+		Analysis.TimedDatum<Double> datum = new Analysis.TimedDatum<>(o.time, o.value.pressure);
+		recentPressures.add(datum);
+		observations.add(o);
+		if (showPressure)
+			pressureText.setText(formatPressure(o.value.pressure));
+		int n = altitudeData.size();
+		if ((n == 0 || altitudeData.get(n-1).time + altitudeTimeSpacing <= o.time) &&
+				(!calibration.equals("nws") || pressureAtSeaLevel >= 0 || System.currentTimeMillis() > startTime+10000)) {
+			double alt;
+			setStationData(o.value.stationData);
+			if (smoothing.equals("none"))
+				alt = calculateAltitude(o.value.pressure);
+			else
+				alt = calculateAltitude(recentPressures.smooth(smoothing));
+			if (showAltitude)
+				altitudeText.setText(formatAltitude(alt));
+			altitudeData.add(new Analysis.TimedDatum(o.time, alt));
+			if (showGraph)
+				graphView.setData(altitudeData, true);
+		}
+		if (showLapCount && lastLapCountTime + LAP_COUNT_TIME <= o.time) {
+			// TODO: move to background thread
+			lapCountText.setText(""+(new Analysis(altitudeData).countLaps()));
+			lastLapCountTime = o.time;
+		}
+	}
+
+	public void showValue(long tMillis, double pressure) {
 		if (pressure > 0) {
 			Analysis.TimedDatum datum = new Analysis.TimedDatum(tMillis, pressure);
 			lastPressure = pressure;
@@ -314,7 +367,9 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 			observations.add(new Analysis.TimedDatum<Observations>(tMillis, new Observations(pressure, lastStationData)));
 			if (showPressure)
 				pressureText.setText(formatPressure(pressure));
-			if (!calibration.equals("nws") || pressureAtSeaLevel >= 0 || System.currentTimeMillis() > startTime+10000) {
+			int n = altitudeData.size();
+			if ((n == 0 || altitudeData.get(n-1).time + altitudeTimeSpacing <= tMillis) &&
+					(!calibration.equals("nws") || pressureAtSeaLevel >= 0 || System.currentTimeMillis() > startTime+10000)) {
 				double alt;
 				if (smoothing.equals("none"))
 					alt = calculateAltitude(pressure);
@@ -326,8 +381,9 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 				if (showGraph)
 					graphView.setData(altitudeData, true);
 			}
-			if (showLapCount && lastLapCountTime + LAP_COUNT_TIME <= System.currentTimeMillis()) {
+			if (showLapCount && lastLapCountTime + LAP_COUNT_TIME <= tMillis) {
 				lapCountText.setText(""+(new Analysis(altitudeData).countLaps()));
+				lastLapCountTime = tMillis;
 
 			}
 //			Log.v("GiantBarometer", ""+pressure+" "+alt);
@@ -366,7 +422,6 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		double alt = 44330 * (1 - Math.pow(pressure/p0, 1./5.255));
 		if (calibration.equals("relative")) {
 			alt -= 44330 * (1 - Math.pow(zeroedPressure/p0, 1./5.255));
-			Log.v("GiantBarometer", ""+zeroedPressure+" "+alt);
 		}
 		return alt;
 
@@ -404,21 +459,33 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
 		Log.v("GiantBarometer", "onpause");
 
+		BarometerService.activity = null;
+		if (!background)
+			stopBarometerService();
+
 		if (!initialized)
 			return;
 
-		try {
-			sensorManager.unregisterListener(this);
+		if (! useService) {
+			try {
+				sensorManager.unregisterListener(this);
+			} catch (Exception e) {
+			}
 		}
-		catch(Exception e) {
-
+		try {
+			locationManager.removeUpdates(this);
+		} catch (Exception e) {
 		}
 		if (calibration.equals("relative"))
 			options.edit().putFloat(Options.PREF_ZEROED_PRESSURE, (float) zeroedPressure).apply();
-		if (locationListener != null) {
-			locationManager.removeUpdates(locationListener);
-			locationListener = null;
-		}
+	}
+
+	private void stopBarometerService() {
+		BarometerService.activity = null;
+		BarometerService.self = null;
+		Log.v("GiantBarometer", "stopping service");
+		Intent i = new Intent(this, BarometerService.class);
+		stopService(i);
 	}
 
 	@SuppressLint("MissingPermission")
@@ -436,6 +503,7 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		if (!assurePermissions()) {
 			return;
 		}
+
 
 		if (!haveAllPermissions()) {
 			Log.v("GiantBarometer", "missing permissions");
@@ -471,7 +539,9 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		}
 		if (invalidateData) {
 			altitudeData.clear();
+			stopBarometerService();
 		}
+
 		smoothing = options.getString(Options.PREF_SMOOTHING, "med2000");
 
 		pressureText.setVisibility(showPressure ? View.VISIBLE : View.GONE);
@@ -486,28 +556,37 @@ public class BarometerActivity extends Activity implements SensorEventListener {
         showValue(0,-1);
 
 		sensorManager = (SensorManager) getSystemService(Service.SENSOR_SERVICE);
-		sensorManager.registerListener(this,
-				sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE),
-				SensorManager.SENSOR_DELAY_NORMAL);
+		if (!useService)
+			sensorManager.registerListener(this,
+					sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE),
+					SensorManager.SENSOR_DELAY_NORMAL);
+		// normal: 200ms foreground
 
 		lastValidTime = -WAIT_TIME;
 		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		startTime = System.currentTimeMillis();
 		if (calibration.equals("nws")) {
-			locationListener = new LocationListener() {
-				@Override
-				public void onLocationChanged(Location location) {
-					updateStandardPressure(location);
-				}
-			};
 			updateStandardPressure(locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
-			locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
-					standardPressureTimeout / 4,
-					500, locationListener);
+			requestLocation();
+		}
+
+		if (BarometerService.self == null) {
+			Log.v("GiantBarometer", "starting service");
+			Intent i = new Intent(this, BarometerService.class);
+			if ( Build.VERSION.SDK_INT >= 26) {
+				startForegroundService(i);
+			}
+			else {
+				startService(i);
+			}
+			barometerService = true;
+			background = false;
 		}
 		else {
-			locationListener = null;
+			background = true;
 		}
+		backgroundCheckbox.setChecked(background);
+		BarometerService.activity = this;
 
 		Log.v("GiantBarometer", "running");
 		initialized = true;
@@ -527,12 +606,14 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 
 	@Override
 	public void onSensorChanged(SensorEvent event) {
-		Log.v("GiantBarometer", "sensor "+event);
+//		Log.v("GiantBarometer", "sensor "+event.values);
 		if (event.sensor.getType() == Sensor.TYPE_PRESSURE) {
 			float v = event.values[0];
 			if (v >= 0)
 				onDataReceived(System.currentTimeMillis(), v);
 		}
+		if (calibration.equals("nws") && System.currentTimeMillis() >= lastLocationTime + standardPressureTimeout)
+			requestLocation();
 	}
 
 	@Override
@@ -545,15 +626,32 @@ public class BarometerActivity extends Activity implements SensorEventListener {
 		onResetGraph(view);
 	}
 
+	@Override
+	public void onLocationChanged(Location location) {
+		Log.v(TAG, "location changed");
+		lastLocationTime = System.currentTimeMillis();
+		locationManager.removeUpdates(this);
+		updateStandardPressure(location);
+	}
+
+
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		stopBarometerService();
+	}
+
+
 
 	static final class Observations {
 		double pressure;
-		NOAA stationData;
+		NWS stationData;
 
-		Observations(double _pressure, NOAA _stationData) {
+		Observations(double _pressure, NWS _stationData) {
 			pressure = _pressure;
 			stationData = _stationData;
 		}
 	}
- }
+
+}
 

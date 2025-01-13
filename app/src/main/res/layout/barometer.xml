@@ -46,16 +46,22 @@
         android:padding="0sp"
         android:textSize="50sp"
         />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/toolbar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|right"
-        android:background="@null"
-        android:orientation="horizontal"
-        >
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            >
+        <CheckBox
+            android:id="@+id/background"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:buttonTint="#FFFFFF"
+            android:text="Work in background"/>
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"/>
         <ImageButton
             android:id="@+id/resetGraph"
             android:layout_width="wrap_content"
@@ -81,5 +87,6 @@
         android:padding="12dp"
         android:onClick="onSettingsClick" />
     </LinearLayout>
+</LinearLayout>
 
 </FrameLayout>

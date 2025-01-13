@@ -14,33 +14,5 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">Giant Lap Counter</string>
-    <string name="ble_not_supported">Bluetooth LE is not supported</string>
-    <string name="label_data">Data:</string>
-        <string name="label_heartrate">Heart rate:</string>
-    <string name="label_device_address">Device address:</string>
-    <string name="label_state">State:</string>
-    <string name="label_services">Services</string>
-    <string name="no_data">No data</string>
-    <string name="connected">Connected</string>
-    <string name="disconnected">Disconnected</string>
-    <string name="title_devices">Bluetooth Scan</string>
-    <string name="error_bluetooth_not_supported">Bluetooth not supported.</string>
-
-    <string name="action_demo">View</string>
-
-    <string name="title_demo_accelerometer">Accelerometer Demo</string>
-    <string name="title_demo_gyroscope">Gyroscope Demo</string>
-    <string name="title_demo_heartrate">Heart Rate</string>
-
-    <string name="unknown_device">Unknown device</string>
-    <string name="unknown_characteristic">Unknown characteristic</string>
-    <string name="unknown_service">Unknown service</string>
-
-    <!-- Menu items -->
-    <string name="menu_connect">Connect</string>
-    <string name="menu_disconnect">Disconnect</string>
-    <string name="menu_info">Info</string>
-    <string name="menu_scan">Scan</string>
-    <string name="menu_stop">Stop</string>
+    <string name="app_name">Giant Barometer</string>
 </resources>

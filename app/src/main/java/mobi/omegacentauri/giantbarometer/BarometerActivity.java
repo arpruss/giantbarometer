@@ -213,7 +213,7 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 	public synchronized void setStationData(NWS nws) {
 		if (nws == null)
 			return;
-		Log.v("GiantBarometer", "updating station data "+nws.pressureAtSeaLevel+" "+nws.temperature);
+//		Log.v("GiantBarometer", "updating station data "+nws.pressureAtSeaLevel+" "+nws.temperature);
 		lastStationData = nws;
 		pressureAtSeaLevel = nws.pressureAtSeaLevel;
 		temperature = nws.temperature;
@@ -322,40 +322,45 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 		}
 	}
 
-	public void setObservations(Analysis.TimedDatum<Observations> o) {
+	public void addObservations(List<Analysis.TimedDatum<Observations>> os) {
 		runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
-				_setObservations(o);
+				_addObservations(os);
 			}
 		});
 	}
-	public void _setObservations(Analysis.TimedDatum<Observations> o) {
-		lastPressure = o.value.pressure;
-		Analysis.TimedDatum<Double> datum = new Analysis.TimedDatum<>(o.time, o.value.pressure);
-		recentPressures.add(datum);
-		observations.add(o);
-		if (showPressure)
-			pressureText.setText(formatPressure(o.value.pressure));
-		int n = altitudeData.size();
-		if ((n == 0 || altitudeData.get(n-1).time + altitudeTimeSpacing <= o.time) &&
-				(!calibration.equals("nws") || pressureAtSeaLevel >= 0 || System.currentTimeMillis() > startTime+10000)) {
-			double alt;
-			setStationData(o.value.stationData);
-			if (smoothing.equals("none"))
-				alt = calculateAltitude(o.value.pressure);
-			else
-				alt = calculateAltitude(recentPressures.smooth(smoothing));
-			if (showAltitude)
-				altitudeText.setText(formatAltitude(alt));
-			altitudeData.add(new Analysis.TimedDatum(o.time, alt));
-			if (showGraph)
-				graphView.setData(altitudeData, true);
+	public void _addObservations(List<Analysis.TimedDatum<Observations>> os) {
+		if (os.isEmpty())
+			return;
+		boolean updateAltitudes = false;
+		double lastAltitude = Double.NaN;
+		long systemTime = System.currentTimeMillis();
+		for (Analysis.TimedDatum<Observations> o: os) {
+			lastPressure = o.value.pressure;
+			Analysis.TimedDatum<Double> datum = new Analysis.TimedDatum<>(o.time, o.value.pressure);
+			recentPressures.add(datum);
+			observations.add(o);
+			int n = altitudeData.size();
+			if ((n == 0 || altitudeData.get(n - 1).time + altitudeTimeSpacing <= o.time) &&
+					(!calibration.equals("nws") || pressureAtSeaLevel >= 0 || systemTime > startTime + 10000)) {
+				setStationData(o.value.stationData);
+				if (smoothing.equals("none"))
+					lastAltitude = calculateAltitude(o.value.pressure);
+				else
+					lastAltitude = calculateAltitude(recentPressures.smooth(smoothing));
+				altitudeData.add(new Analysis.TimedDatum(o.time, lastAltitude));
+			}
 		}
-		if (showLapCount && lastLapCountTime + LAP_COUNT_TIME <= o.time) {
-			// TODO: move to background thread
-			lapCountText.setText(""+(new Analysis(altitudeData).countLaps()));
-			lastLapCountTime = o.time;
+		if (showPressure)
+			pressureText.setText(formatPressure(lastPressure));
+		if (showAltitude && !Double.isNaN(lastAltitude))
+			altitudeText.setText(formatAltitude(lastAltitude));
+		if (showGraph)
+			graphView.setData(altitudeData, true);
+		if (showLapCount && lastLapCountTime + LAP_COUNT_TIME <= systemTime) {
+			lapCountText.setText("" + (new Analysis(altitudeData).countLaps()));
+			lastLapCountTime = systemTime;
 		}
 	}
 

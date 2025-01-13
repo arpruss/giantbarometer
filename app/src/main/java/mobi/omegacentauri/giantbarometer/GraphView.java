@@ -51,7 +51,7 @@ public class GraphView extends View {
         paint.setColor(Color.WHITE);
 
         labelPaint = new Paint();
-        labelPaint.setColor(Color.DKGRAY);
+        labelPaint.setColor(Color.LTGRAY);
         labelPaint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, (float) 20, dm));
 
         hLinePaint = new Paint();
@@ -59,7 +59,7 @@ public class GraphView extends View {
         nudge = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, (float) 1, dm);
         hLinePaint.setStrokeWidth(nudge);
 
-        labelX = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, (float) 20, dm);
+        labelX = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, (float) 3, dm);
 
         basePaint = new Paint();
         basePaint.setTextSize(BASE_FONT_SIZE);

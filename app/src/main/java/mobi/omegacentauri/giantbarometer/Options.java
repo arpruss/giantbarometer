@@ -36,6 +36,7 @@ public class Options extends PreferenceActivity {
     public static final String PREF_ZEROED_PRESSURE = "zeroedPressure";
     public static final String PREF_SMOOTHING = "smoothing";
     public static final String PREF_LAP_COUNT = "lapCount";
+    public static final String PREF_GPS_ALTITUDE = "gpsAltitude";
     private SharedPreferences.OnSharedPreferenceChangeListener listener;
     private SharedPreferences options;
 

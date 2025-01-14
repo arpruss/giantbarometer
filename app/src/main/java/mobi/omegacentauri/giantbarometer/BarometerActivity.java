@@ -34,9 +34,8 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BarometerActivity extends Activity implements SensorEventListener,LocationListener {
-	private final static String TAG = BarometerActivity.class
-			.getSimpleName();
+public class BarometerActivity extends Activity implements SensorEventListener/*,LocationListener*/ {
+	private final static String TAG = "GiantBarometer:activity";
 
     private static final long WAIT_TIME = 6000; // only show invalid value after this amount of waiting
 	double pressureAtSeaLevel = -1;
@@ -63,12 +62,12 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 	private static final long buttonHideTime = 8000;
 
 	List<Analysis.TimedDatum<Double>> altitudeData = new ArrayList<>();
-	List<Analysis.TimedDatum<Observations>> observations = new ArrayList<>();
+//	List<Analysis.TimedDatum<Observations>> observations = new ArrayList<>();
 	Analysis.RecentData recentPressures = new Analysis.RecentData(maximumKeep);
 	private GraphView graphView;
 	private SharedPreferences options;
 	private SensorManager sensorManager;
-	private LocationManager locationManager;
+//	private LocationManager locationManager;
 	private double temperature = -1;
 	private long startTime;
 	private boolean showPressure;
@@ -90,22 +89,16 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 	private boolean initialized = false;
 	private long lastLocationTime = Long.MIN_VALUE;
 
+	public static final String locationPermission = "android.permission.ACCESS_COARSE_LOCATION";//"android.permission.ACCESS_FINE_LOCATION";
+
 	private boolean background = false;
 	private CheckBox backgroundCheckbox;
 	static final boolean useService = true;
+	private boolean gpsAltitude = false;
 
 	boolean haveLocationPermission() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-			return PackageManager.PERMISSION_GRANTED == checkSelfPermission("android.permission.ACCESS_COARSE_LOCATION");
-		}
-		else {
-			return true;
-		}
-	}
-
-	boolean haveConnectPermission() {
-		if (Build.VERSION.SDK_INT >= 31) {
-			return PackageManager.PERMISSION_GRANTED == checkSelfPermission("android.permission.BLUETOOTH_CONNECT");
+			return PackageManager.PERMISSION_GRANTED == checkSelfPermission(locationPermission);
 		}
 		else {
 			return true;
@@ -142,7 +135,7 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 				ArrayList<String> permissions = new ArrayList<>();
 				if (!l)
-					permissions.add("android.permission.ACCESS_COARSE_LOCATION");
+					permissions.add(locationPermission);
 				String[] pp = new String[permissions.size()];
 				permissions.toArray(pp);
 				for (String p : pp)
@@ -188,13 +181,13 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 		recentPressures.clear();
 	}
 
-	@SuppressLint("MissingPermission")
-	private void requestLocation() {
-		Log.v("GiantBarometer", "request");
-		locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
-				standardPressureTimeout / 3,
-				500, this);
-	}
+//	@SuppressLint("MissingPermission")
+//	private void requestLocation() {
+//		Log.v("GiantBarometer", "request");
+//		locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+//				standardPressureTimeout / 3,
+//				500, this);
+//	}
 
 	private void updateStandardPressure(Location location) {
 		long t = System.currentTimeMillis();
@@ -202,6 +195,7 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 		AsyncTask.execute(new Runnable() {
 			@Override
 			public void run() {
+				Log.v(TAG, "getting nws data");
 				NWS nws = new NWS();
 				if (nws.getData(location)) {
 					setStationData(nws);
@@ -337,19 +331,31 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 		double lastAltitude = Double.NaN;
 		long systemTime = System.currentTimeMillis();
 		for (Analysis.TimedDatum<Observations> o: os) {
-			lastPressure = o.value.pressure;
-			Analysis.TimedDatum<Double> datum = new Analysis.TimedDatum<>(o.time, o.value.pressure);
-			recentPressures.add(datum);
-			observations.add(o);
+			if (! Double.isNaN(o.value.pressure)) {
+				lastPressure = o.value.pressure;
+				Analysis.TimedDatum<Double> datum = new Analysis.TimedDatum<>(o.time, o.value.pressure);
+				recentPressures.add(datum);
+			}
+//			observations.add(o);
 			int n = altitudeData.size();
+			if (o.value.stationData != null)
+				setStationData(o.value.stationData);
 			if ((n == 0 || altitudeData.get(n - 1).time + altitudeTimeSpacing <= o.time) &&
 					(!calibration.equals("nws") || pressureAtSeaLevel >= 0 || systemTime > startTime + 10000)) {
-				setStationData(o.value.stationData);
-				if (smoothing.equals("none"))
-					lastAltitude = calculateAltitude(o.value.pressure);
-				else
-					lastAltitude = calculateAltitude(recentPressures.smooth(smoothing));
-				altitudeData.add(new Analysis.TimedDatum(o.time, lastAltitude));
+				boolean haveAltitude = false;
+				if (! Double.isNaN(o.value.altitude)) {
+					lastAltitude = o.value.altitude;
+					haveAltitude = true;
+				}
+				else if (! gpsAltitude && ! Double.isNaN(o.value.pressure)) {
+					if (smoothing.equals("none"))
+						lastAltitude = calculateAltitude(o.value.pressure);
+					else
+						lastAltitude = calculateAltitude(recentPressures.smooth(smoothing));
+					haveAltitude = true;
+				}
+				if (haveAltitude)
+					altitudeData.add(new Analysis.TimedDatum(o.time, lastAltitude));
 			}
 		}
 		if (showPressure)
@@ -369,7 +375,7 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 			Analysis.TimedDatum datum = new Analysis.TimedDatum(tMillis, pressure);
 			lastPressure = pressure;
 			recentPressures.add(datum);
-			observations.add(new Analysis.TimedDatum<Observations>(tMillis, new Observations(pressure, lastStationData)));
+//			observations.add(new Analysis.TimedDatum<Observations>(tMillis, new Observations(pressure, lastStationData)));
 			if (showPressure)
 				pressureText.setText(formatPressure(pressure));
 			int n = altitudeData.size();
@@ -424,13 +430,13 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 
 		// todo: temperature
 		// https://physics.stackexchange.com/questions/333475/how-to-calculate-altitude-from-current-temperature-and-pressure
-		double alt = 44330 * (1 - Math.pow(pressure/p0, 1./5.255));
+		double alt = (Math.pow(p0/pressure,1/5.257)-1)*temperature / 0.0065;
+//		double alt = 44330 * (1 - Math.pow(pressure/p0, 1./5.255));
 		if (calibration.equals("relative")) {
 			alt -= 44330 * (1 - Math.pow(zeroedPressure/p0, 1./5.255));
 		}
 		return alt;
 
-//		return (Math.pow(p0/pressure,1/5.257)-1)*temperature / 0.0065;
 	}
 
 
@@ -477,10 +483,10 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 			} catch (Exception e) {
 			}
 		}
-		try {
-			locationManager.removeUpdates(this);
-		} catch (Exception e) {
-		}
+//		try {
+//			locationManager.removeUpdates(this);
+//		} catch (Exception e) {
+//		}
 		if (calibration.equals("relative"))
 			options.edit().putFloat(Options.PREF_ZEROED_PRESSURE, (float) zeroedPressure).apply();
 	}
@@ -524,6 +530,8 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 		showGraph = options.getBoolean(Options.PREF_SHOW_GRAPH, true);
 		showLapCount = options.getBoolean(Options.PREF_LAP_COUNT, false);
 		calibration = options.getString(Options.PREF_CALIBRATION, "nws");
+		gpsAltitude = locationPermission.contains("FINE") && options.getBoolean(Options.PREF_GPS_ALTITUDE, false);
+		Log.v(TAG, "gpsAltitude "+gpsAltitude);
 
 		boolean invalidateData = false;
 		String s = options.getString(Options.PREF_PRESSURE_UNITS, "hPa");
@@ -568,12 +576,12 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 		// normal: 200ms foreground
 
 		lastValidTime = -WAIT_TIME;
-		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		startTime = System.currentTimeMillis();
-		if (calibration.equals("nws")) {
-			updateStandardPressure(locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
-			requestLocation();
-		}
+//		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+//		if (calibration.equals("nws")) {
+//			updateStandardPressure(locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
+//			requestLocation();
+//		}
 
 		if (BarometerService.self == null) {
 			Log.v("GiantBarometer", "starting service");
@@ -605,7 +613,7 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 
     public void onResetGraph(View view) {
 		altitudeData.clear();
-		observations.clear();
+//		observations.clear();
 		graphView.setData(altitudeData, true);
     }
 
@@ -617,8 +625,8 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 			if (v >= 0)
 				onDataReceived(System.currentTimeMillis(), v);
 		}
-		if (calibration.equals("nws") && System.currentTimeMillis() >= lastLocationTime + standardPressureTimeout)
-			requestLocation();
+//		if (calibration.equals("nws") && System.currentTimeMillis() >= lastLocationTime + standardPressureTimeout)
+//			requestLocation();
 	}
 
 	@Override
@@ -631,13 +639,13 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 		onResetGraph(view);
 	}
 
-	@Override
-	public void onLocationChanged(Location location) {
-		Log.v(TAG, "location changed");
-		lastLocationTime = System.currentTimeMillis();
-		locationManager.removeUpdates(this);
-		updateStandardPressure(location);
-	}
+//	@Override
+//	public void onLocationChanged(Location location) {
+//		Log.v(TAG, "location changed");
+//		lastLocationTime = System.currentTimeMillis();
+//		locationManager.removeUpdates(this);
+//		updateStandardPressure(location);
+//	}
 
 
 	@Override
@@ -650,11 +658,19 @@ public class BarometerActivity extends Activity implements SensorEventListener,L
 
 	static final class Observations {
 		double pressure;
+		double altitude;
 		NWS stationData;
 
 		Observations(double _pressure, NWS _stationData) {
 			pressure = _pressure;
+			altitude = Double.NaN;
 			stationData = _stationData;
+		}
+
+		Observations(double _altitude) {
+			altitude = _altitude;
+			pressure = Double.NaN;
+			stationData = null;
 		}
 	}
 

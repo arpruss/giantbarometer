@@ -14,14 +14,20 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class NWS {
     double pressureAtSeaLevel;
     double temperature;
 
+    static final String pressureToUse = "seaLevelPressure"; // or: "barometricPressure"
+
     long time;
     static final int readTimeout = 10000;
     static final int connectTimeout = 10000;
+    private static final String TAG = "GiantBarometer:NWS";
 
     public boolean getData(Location location) {
         try {
@@ -36,24 +42,36 @@ public class NWS {
             JSONArray features = stationsList.getJSONArray("features");
             boolean success = false;
             double altitude = 0;
+
             for (int i=0;i<features.length();i++) {
                 try {
                     JSONObject feature = (JSONObject) features.get(i);
                     JSONObject featureProperties = (JSONObject) feature.get("properties");
-//                    JSONObject elevation = (JSONObject) featureProperties.get("elevation");
-//                    altitude = elevation.getDouble("value");
-                    String stationId = featureProperties.getString("stationIdentifier");
-                    String observationsURL = "https://api.weather.gov/stations/"+stationId+"/observations/latest";
+                    //                    JSONObject elevation = (JSONObject) featureProperties.get("elevation");
+                    //                    altitude = elevation.getDouble("value");
+                    String id = featureProperties.getString("stationIdentifier");
+                }
+                catch (Exception e) {
+                    Log.v(TAG, "error "+e);
+                }
+            }
+
+            for (int i = 0 ; i < features.length() ; i++ ) {
+                try {
+                    JSONObject feature = (JSONObject) features.get(i);
+                    String observationsURL = feature.get("id") + "/observations/latest";
                     JSONObject observationProperties = fetchJSON(observationsURL).getJSONObject("properties");
                     if (observationProperties == null)
                         continue;
-                    pressureAtSeaLevel = observationProperties.getJSONObject("barometricPressure").getDouble("value")/100.;
+//                    Log.v("GiantBarometer:NWS", "alt "+altitude);
+//                    double barometricPressure = observationProperties.getJSONObject("barometricPressure").getDouble("value")/100.;
+                    pressureAtSeaLevel = observationProperties.getJSONObject(pressureToUse).getDouble("value")/100.;
                     temperature = 273.15 + observationProperties.getJSONObject("temperature").getDouble("value");
+                    Log.v(TAG, "t "+temperature+" "+pressureToUse+" "+pressureAtSeaLevel);
                     time = System.currentTimeMillis();
                     return true;
                 }
                 catch (JSONException e) {
-                    continue;
                 }
             }
             return false;
@@ -62,6 +80,10 @@ public class NWS {
         }
 
         return false;
+    }
+
+    public double calculateDistance(double lat1, double long1, double lat2, double long2) {
+        return Math.abs(lat1-lat2)+Math.abs(long1-long2);
     }
 
     private JSONObject fetchJSON(String address) {

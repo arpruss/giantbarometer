@@ -25,6 +25,9 @@
         android:entryValues="@array/pressureUnits"
         android:entries="@array/pressureUnits"
         android:defaultValue="hPa"/>
+    <!-- <CheckBoxPreference android:title="Get altitude from GPS"
+        android:key="gpsAltitude"
+        android:defaultValue="false"/> -->
     <ListPreference android:title="Altitude units"
         android:key="altitudeUnits"
         android:entries="@array/altitudeUnits"

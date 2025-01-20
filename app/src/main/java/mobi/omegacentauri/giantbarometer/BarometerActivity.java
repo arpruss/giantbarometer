@@ -2,9 +2,9 @@ package mobi.omegacentauri.giantbarometer;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Application;
-import android.app.Service;
-import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
@@ -21,6 +21,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -67,7 +68,6 @@ public class BarometerActivity extends Activity {
 	private String altitudeUnits;
 	private String calibration;
 	public static final double standardPressureAtSeaLevel = 1013.25;
-	double zeroedPressure = standardPressureAtSeaLevel;
 	double lastPressure = standardPressureAtSeaLevel;
 	private String smoothing = "none";
 	private WeatherInfo lastStationData = null;
@@ -84,6 +84,7 @@ public class BarometerActivity extends Activity {
 	private boolean background = false;
 	private CheckBox backgroundCheckbox;
 	private boolean gpsAltitude = false;
+	private double zeroedAlt = 0;
 
 	boolean haveLocationPermission() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -378,6 +379,15 @@ public class BarometerActivity extends Activity {
 		}
     }
 
+	private double parseAltitude(String s) {
+		double a = Double.parseDouble(s);
+		if (altitudeUnits.equals("meters"))
+			return a;
+		else
+			return a / 3.280839895;
+
+	}
+
 	private String formatAltitude(double alt) {
 		if (altitudeUnits.equals("meters"))
 			return String.format("%.1f", alt);
@@ -398,6 +408,10 @@ public class BarometerActivity extends Activity {
 			return " ? ";
 	}
 
+	private double calculatePressureWithoutTemperature(double pressure, double pressureAtSeaLevel) {
+		return  44330 * (1 - Math.pow(pressure/pressureAtSeaLevel, 1./5.255));
+	}
+
 	private synchronized double calculateAltitude(double pressure) {
 		double p0 = (!(calibration.equals("nws") || calibration.equals("om")) || pressureAtSeaLevel < 0) ? standardPressureAtSeaLevel : pressureAtSeaLevel;
 
@@ -407,9 +421,9 @@ public class BarometerActivity extends Activity {
 		if (calibration.equals("nws"))
 			alt = (Math.pow(p0/pressure,1/5.257)-1)*temperature / 0.0065;
 		else
-			alt = 44330 * (1 - Math.pow(pressure/p0, 1./5.255));
+			alt = calculatePressureWithoutTemperature(pressure, p0);
 		if (calibration.equals("relative")) {
-			alt -= 44330 * (1 - Math.pow(zeroedPressure/p0, 1./5.255));
+			alt -= zeroedAlt;
 		}
 		return alt;
 
@@ -435,12 +449,8 @@ public class BarometerActivity extends Activity {
 		if (!initialized)
 			return;
 
-//		try {
-//			locationManager.removeUpdates(this);
-//		} catch (Exception e) {
-//		}
 		if (calibration.equals("relative"))
-			options.edit().putFloat(Options.PREF_ZEROED_PRESSURE, (float) zeroedPressure).apply();
+			options.edit().putFloat(Options.PREF_ZEROED_ALTITUDE, (float)zeroedAlt).apply();
 	}
 
 	private void stopBarometerService() {
@@ -474,9 +484,16 @@ public class BarometerActivity extends Activity {
 			return;
 		}
 
+		findViewById(R.id.zero).setOnLongClickListener(new View.OnLongClickListener() {
+			@Override
+			public boolean onLongClick(View v) {
+				return onLongZero(v);
+			}
+		});
+
 		Log.v("GiantBarometer", "resuming with permissions");
 
-		zeroedPressure = options.getFloat(Options.PREF_ZEROED_PRESSURE, (float) standardPressureAtSeaLevel);
+		zeroedAlt = options.getFloat(Options.PREF_ZEROED_ALTITUDE, (float) standardPressureAtSeaLevel);
 		showPressure = options.getBoolean(Options.PREF_SHOW_PRESSURE, true);
 		showAltitude = options.getBoolean(Options.PREF_SHOW_ALTITUDE, true);
 		showGraph = options.getBoolean(Options.PREF_SHOW_GRAPH, true);
@@ -565,8 +582,35 @@ public class BarometerActivity extends Activity {
     }
 
 
+	public boolean onLongZero(View view) {
+		AlertDialog.Builder ab = new AlertDialog.Builder(this);
+		ab.setTitle("Current altitude ("+altitudeUnits+")");
+		final double alt = calculateAltitude(lastPressure);
+		String s = String.format("%.1f", alt);
+		final EditText value = new EditText(this);
+		value.setText(s);
+		ab.setView(value);
+		ab.setCancelable(true);
+		ab.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				try {
+					zeroedAlt = zeroedAlt - ( parseAltitude(value.getText().toString()) - alt );
+				}
+				catch (Exception e) {
+					Toast.makeText(BarometerActivity.this, "Invalid number", Toast.LENGTH_LONG).show();
+				}
+			}
+		});
+		ab.create().show();
+		value.setFocusableInTouchMode(true);
+		value.setFocusable(true);
+		value.setFocusedByDefault(true);
+		value.selectAll();
+		return true;
+	}
 	public void onZero(View view) {
-		zeroedPressure = lastPressure;
+		zeroedAlt =  calculatePressureWithoutTemperature(lastPressure, standardPressureAtSeaLevel);
 		onResetGraph(view);
 	}
 

@@ -33,8 +33,8 @@ public class Options extends PreferenceActivity {
     public static final String PREF_SHOW_PRESSURE = "showPressure";
     public static final String PREF_SHOW_ALTITUDE = "showAltitude";
     public static final String PREF_SHOW_GRAPH = "showGraph";
+    public static final String PREF_ZEROED_ALTITUDE = "zeroedAlt";
     private static final String PREF_CALIBRATION = "calibration";
-    public static final String PREF_ZEROED_PRESSURE = "zeroedPressure";
     public static final String PREF_SMOOTHING = "smoothing";
     public static final String PREF_LAP_COUNT = "lapCount";
     public static final String PREF_GPS_ALTITUDE = "gpsAltitude";

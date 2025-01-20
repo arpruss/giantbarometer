@@ -13,6 +13,7 @@ import android.preference.PreferenceActivity;
 import android.preference.PreferenceGroup;
 import android.preference.PreferenceManager;
 import android.text.Html;
+import android.util.Log;
 import android.view.KeyEvent;
 
 import java.io.BufferedReader;
@@ -32,7 +33,7 @@ public class Options extends PreferenceActivity {
     public static final String PREF_SHOW_PRESSURE = "showPressure";
     public static final String PREF_SHOW_ALTITUDE = "showAltitude";
     public static final String PREF_SHOW_GRAPH = "showGraph";
-    public static final String PREF_CALIBRATION = "calibration";
+    private static final String PREF_CALIBRATION = "calibration";
     public static final String PREF_ZEROED_PRESSURE = "zeroedPressure";
     public static final String PREF_SMOOTHING = "smoothing";
     public static final String PREF_LAP_COUNT = "lapCount";
@@ -44,9 +45,19 @@ public class Options extends PreferenceActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        PreferenceManager.setDefaultValues(this, R.xml.options, true);
-
         options = PreferenceManager.getDefaultSharedPreferences(this);
+
+        if (options.getString(Options.PREF_CALIBRATION, null) == null) {
+            String locale = getResources().getConfiguration().locale.getCountry();
+            if (locale.equals("US")) {
+                options.edit().putString(Options.PREF_CALIBRATION, "nws").apply();
+            }
+            else {
+                options.edit().putString(Options.PREF_CALIBRATION, "relative").apply();
+            }
+        }
+
+        PreferenceManager.setDefaultValues(this, R.xml.options, true);
 
         listener = new SharedPreferences.OnSharedPreferenceChangeListener() {
             @Override
@@ -67,6 +78,12 @@ public class Options extends PreferenceActivity {
                 return false;
             }
         });
+    }
+
+    static String getCalibration(Context c, SharedPreferences o) {
+        String locale = c.getResources().getConfiguration().locale.getCountry();
+        Log.v("GiantBarometer", "locale " + locale);
+        return o.getString(PREF_CALIBRATION, locale.equals("US") ? "nws" : "om");
     }
 
     @Override

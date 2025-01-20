@@ -11,11 +11,13 @@
     </string-array>
     <string-array name="altitudeOffsetValues" >
         <item>nws</item>
+        <item>om</item>
         <item>relative</item>
         <item>uncalibrated</item>
     </string-array>
     <string-array name="altitudeOffsets" >
         <item>Calibrate with NWS weather data (US only)</item>
+        <item>Calibrate with Open-Meteo weather data</item>
         <item>Relative (press 0 to reset)</item>
         <item>Uncalibrated</item>
     </string-array>

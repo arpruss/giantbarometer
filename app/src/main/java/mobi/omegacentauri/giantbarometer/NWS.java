@@ -18,15 +18,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class NWS {
-    double pressureAtSeaLevel;
-    double temperature;
+public class NWS extends WeatherInfo {
 
     static final String pressureToUse = "seaLevelPressure"; // or: "barometricPressure"
-
-    long time;
-    static final int readTimeout = 10000;
-    static final int connectTimeout = 10000;
     private static final String TAG = "GiantBarometer:NWS";
 
     public boolean getData(Location location) {
@@ -86,35 +80,4 @@ public class NWS {
         return Math.abs(lat1-lat2)+Math.abs(long1-long2);
     }
 
-    private JSONObject fetchJSON(String address) {
-        try {
-            URL url = new URL(address);
-            HttpURLConnection c = (HttpURLConnection) url.openConnection();
-            c.setReadTimeout(readTimeout);
-            c.setConnectTimeout(connectTimeout);
-            c.setRequestProperty("User-Agent", "mobi.omegacentauri.giantbarometer by omegacentaurisoftware@gmail.com");
-            c.connect();
-            InputStream is = c.getInputStream();
-            InputStreamReader irs = new InputStreamReader(is);
-            BufferedReader in = new BufferedReader(irs);
-            StringBuilder data = new StringBuilder();
-
-            while (true) {
-                String line = in.readLine();
-                if (line == null)
-                    break;
-                data.append(line);
-            }
-            in.close();
-            return new JSONObject(data.toString());
-        } catch (MalformedURLException e) {
-            return null;
-        } catch (IOException e) {
-            Log.e("GiantBarometer", "io error "+e);
-            return null;
-        } catch (JSONException e) {
-            Log.e("GiantBarometer", "json error "+e);
-            return null;
-        }
-    }
 }

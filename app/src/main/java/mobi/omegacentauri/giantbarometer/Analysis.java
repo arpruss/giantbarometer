@@ -21,7 +21,7 @@ public class Analysis {
         rawData = _data;
     }
 
-    public int countLaps() {
+    public int countLaps(String mode) {
         filter(rawData, 3.5, 500);
         if (filteredDataCount < 3)
             return 0;
@@ -34,7 +34,12 @@ public class Analysis {
             return 0;
         double height = (rise+fall)/2.;
         countAscentsAndDescents(height, HALF_LAP_TOLERANCE);
-        return Math.min(ascents,descents);
+        if (mode.equals("ascents"))
+            return ascents;
+        else if (mode.equals("descents"))
+            return descents;
+        else
+            return Math.min(ascents,descents);
     }
 
     private void filter(List<TimedDatum<Double>> d, double windowSize, long spacing) {

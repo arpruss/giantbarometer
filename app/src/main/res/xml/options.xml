@@ -38,6 +38,11 @@
         android:entries="@array/smoothingMethods"
         android:entryValues="@array/smoothingMethodValues"
         android:defaultValue="med3000"/>
+    <ListPreference android:title="Lap count method"
+        android:key="lapMode"
+        android:entries="@array/lapModes"
+        android:entryValues="@array/lapModes"
+        android:defaultValue="pairs"/>
     <PreferenceCategory android:title="Licenses and Copyrights">
     <Preference android:key="license" android:title="View Licenses and Copyrights"/>
     </PreferenceCategory>

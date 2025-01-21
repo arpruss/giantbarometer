@@ -85,6 +85,8 @@ public class BarometerActivity extends Activity {
 	private CheckBox backgroundCheckbox;
 	private boolean gpsAltitude = false;
 	private double zeroedAlt = 0;
+	private String lapMode;
+	private long dataStartTime = -1;
 
 	boolean haveLocationPermission() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -167,8 +169,7 @@ public class BarometerActivity extends Activity {
 //		toolbarView =findViewById(R.id.toolbar);
 		buttonHideHandler = new Handler();
 //		showButtons();
-		altitudeData.clear();
-		recentPressures.clear();
+		clearData();
 	}
 
 //	@SuppressLint("MissingPermission")
@@ -195,7 +196,7 @@ public class BarometerActivity extends Activity {
 
 	void showButtons() {
 //		toolbarView.setVisibility(View.VISIBLE);
-		findViewById(R.id.resetGraph).setVisibility(showGraph ? View.VISIBLE : View.GONE);
+		findViewById(R.id.resetGraph).setVisibility((showGraph || showLapCount) ? View.VISIBLE : View.GONE);
 		findViewById(R.id.zero).setVisibility(calibration.equals("relative") ? View.VISIBLE : View.GONE);
 //		if (!isTV()) {
 //			if (buttonHideRunnable == null)
@@ -339,7 +340,7 @@ public class BarometerActivity extends Activity {
 		if (showGraph)
 			graphView.setData(altitudeData, true);
 		if (showLapCount && lastLapCountTime + LAP_COUNT_TIME <= systemTime) {
-			lapCountText.setText("" + (new Analysis(altitudeData).countLaps()));
+			lapCountText.setText("" + (new Analysis(altitudeData).countLaps(lapMode)));
 			lastLapCountTime = systemTime;
 		}
 	}
@@ -367,7 +368,7 @@ public class BarometerActivity extends Activity {
 					graphView.setData(altitudeData, true);
 			}
 			if (showLapCount && lastLapCountTime + LAP_COUNT_TIME <= tMillis) {
-				lapCountText.setText(""+(new Analysis(altitudeData).countLaps()));
+				lapCountText.setText(""+(new Analysis(altitudeData).countLaps(lapMode)));
 				lastLapCountTime = tMillis;
 
 			}
@@ -499,6 +500,7 @@ public class BarometerActivity extends Activity {
 		showGraph = options.getBoolean(Options.PREF_SHOW_GRAPH, true);
 		showLapCount = options.getBoolean(Options.PREF_LAP_COUNT, false);
 		calibration = Options.getCalibration(this, options );
+		lapMode = options.getString(Options.PREF_LAP_MODE, "pairs");
 		gpsAltitude = locationPermission.contains("FINE") && options.getBoolean(Options.PREF_GPS_ALTITUDE, false);
 		Log.v(TAG, "gpsAltitude "+gpsAltitude);
 
@@ -520,7 +522,7 @@ public class BarometerActivity extends Activity {
 			calibration = s;
 		}
 		if (invalidateData) {
-			altitudeData.clear();
+			clearData();
 			stopBarometerService();
 		}
 
@@ -541,6 +543,7 @@ public class BarometerActivity extends Activity {
 
 		lastValidTime = -WAIT_TIME;
 		startTime = System.currentTimeMillis();
+
 //		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 //		if (calibration.equals("nws")) {
 //			updateStandardPressure(locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER));
@@ -569,6 +572,12 @@ public class BarometerActivity extends Activity {
 		initialized = true;
 	}
 
+	private void clearData() {
+		altitudeData.clear();
+		recentPressures.clear();
+		dataStartTime = System.currentTimeMillis();
+	}
+
 	public void onSettingsClick(View view) {
 		final Intent i = new Intent();
 		i.setClass(this, Options.class);
@@ -576,9 +585,9 @@ public class BarometerActivity extends Activity {
 	}
 
     public void onResetGraph(View view) {
-		altitudeData.clear();
-//		observations.clear();
+		clearData();
 		graphView.setData(altitudeData, true);
+		dataStartTime = System.currentTimeMillis();
     }
 
 

@@ -47,4 +47,10 @@
         <item>med5000</item>
         <item>med10000</item>
     </string-array>
+    <string-array name="lapModes">
+        <item>ascents</item>
+        <item>descents</item>
+        <item>pairs</item>
+
+    </string-array>
 </resources>

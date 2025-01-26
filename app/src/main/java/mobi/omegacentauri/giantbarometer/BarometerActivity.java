@@ -37,7 +37,7 @@ public class BarometerActivity extends Activity {
 	double pressureAtSeaLevel = -1;
 	private long lastLapCountTime = -1;
 	private static final long LAP_COUNT_TIME = 2000;
-	private long altitudeTimeSpacing = 500;
+	private long dataTimeSpacing = 500;
     static public long lastValidTime = -WAIT_TIME;
 //	Handler timeoutHandler;
 	Handler buttonHideHandler;
@@ -58,15 +58,17 @@ public class BarometerActivity extends Activity {
 	private static final long buttonHideTime = 8000;
 
 	List<Analysis.TimedDatum<Double>> altitudeData = new ArrayList<>();
+	List<Analysis.TimedDatum<Double>> pressureData = new ArrayList<>();
 //	List<Analysis.TimedDatum<Observations>> observations = new ArrayList<>();
 	Analysis.RecentData recentPressures = new Analysis.RecentData(maximumKeep);
-	private GraphView graphView;
+	private GraphView altGraphView;
+	private GraphView pressureGraphView;
 	private SharedPreferences options;
 	private double temperature = -1;
 	private long startTime;
 	private boolean showPressure;
 	private boolean showAltitude;
-	private boolean showGraph;
+	private boolean showAltGraph;
 	private String pressureUnits;
 	private String altitudeUnits;
 	private String calibration;
@@ -90,6 +92,7 @@ public class BarometerActivity extends Activity {
 	private double zeroedAlt = 0;
 	private String lapMode;
 	private long dataStartTime = -1;
+	private boolean showPressureGraph;
 
 	boolean haveLocationPermission() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -188,7 +191,8 @@ public class BarometerActivity extends Activity {
 		pressureText = (BigTextView) findViewById(R.id.pressure);
 		altitudeText = (BigTextView) findViewById(R.id.altitude);
 		lapCountText = (BigTextView) findViewById(R.id.laps);
-		graphView = (GraphView) findViewById(R.id.graph);
+		altGraphView = (GraphView) findViewById(R.id.alt_graph);
+		pressureGraphView = (GraphView) findViewById(R.id.pressure_graph);
 		backgroundCheckbox = (CheckBox) findViewById(R.id.background);
 		backgroundCheckbox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 			@Override
@@ -230,7 +234,7 @@ public class BarometerActivity extends Activity {
 
 	void showButtons() {
 //		toolbarView.setVisibility(View.VISIBLE);
-		findViewById(R.id.resetGraph).setVisibility((showGraph || showLapCount) ? View.VISIBLE : View.GONE);
+		findViewById(R.id.resetGraph).setVisibility((showAltGraph || showLapCount || showPressureGraph) ? View.VISIBLE : View.GONE);
 		findViewById(R.id.zero).setVisibility(calibration.equals("relative") ? View.VISIBLE : View.GONE);
 //		if (!isTV()) {
 //			if (buttonHideRunnable == null)
@@ -346,72 +350,82 @@ public class BarometerActivity extends Activity {
 				recentPressures.add(datum);
 			}
 //			observations.add(o);
-			int n = altitudeData.size();
+			int n = pressureData.size();
 			if (o.value.stationData != null)
 				setStationData(o.value.stationData);
-			if ((n == 0 || altitudeData.get(n - 1).time + altitudeTimeSpacing <= o.time) &&
-					(!(calibration.equals("nws") || calibration.equals("om")) || pressureAtSeaLevel >= 0 || systemTime > startTime + 10000)) {
-				boolean haveAltitude = false;
-				if (! Double.isNaN(o.value.altitude)) {
-					lastAltitude = o.value.altitude;
-					haveAltitude = true;
+			if ((n == 0 || pressureData.get(n - 1).time + dataTimeSpacing <= o.time)) {
+				if (! Double.isNaN(o.value.pressure))
+					pressureData.add(new Analysis.TimedDatum<Double>(o.time, o.value.pressure));
+				if (!(calibration.equals("nws") || calibration.equals("om")) || pressureAtSeaLevel >= 0 || systemTime > startTime + 10000)
+				{
+					boolean haveAltitude = false;
+					if (!Double.isNaN(o.value.altitude)) {
+						lastAltitude = o.value.altitude;
+						haveAltitude = true;
+					} else if (!gpsAltitude && !Double.isNaN(o.value.pressure)) {
+						if (smoothing.equals("none"))
+							lastAltitude = calculateAltitude(o.value.pressure);
+						else
+							lastAltitude = calculateAltitude(recentPressures.smooth(smoothing));
+						haveAltitude = true;
+					}
+					if (haveAltitude)
+						altitudeData.add(new Analysis.TimedDatum(o.time, lastAltitude));
 				}
-				else if (! gpsAltitude && ! Double.isNaN(o.value.pressure)) {
-					if (smoothing.equals("none"))
-						lastAltitude = calculateAltitude(o.value.pressure);
-					else
-						lastAltitude = calculateAltitude(recentPressures.smooth(smoothing));
-					haveAltitude = true;
-				}
-				if (haveAltitude)
-					altitudeData.add(new Analysis.TimedDatum(o.time, lastAltitude));
 			}
 		}
 		if (showPressure)
 			pressureText.setText(formatPressure(lastPressure));
 		if (showAltitude && !Double.isNaN(lastAltitude))
 			altitudeText.setText(formatAltitude(lastAltitude));
-		if (showGraph)
-			graphView.setData(altitudeData, true);
+		updateAltitudeGraph();
+		updatePressureGraph();
 		if (showLapCount && lastLapCountTime + LAP_COUNT_TIME <= systemTime) {
 			lapCountText.setText("" + (new Analysis(altitudeData).countLaps(lapMode)));
 			lastLapCountTime = systemTime;
 		}
 	}
 
-	public void showValue(long tMillis, double pressure) {
-		if (pressure > 0) {
-			Analysis.TimedDatum datum = new Analysis.TimedDatum(tMillis, pressure);
-			lastPressure = pressure;
-			recentPressures.add(datum);
-//			observations.add(new Analysis.TimedDatum<Observations>(tMillis, new Observations(pressure, lastStationData)));
-			if (showPressure)
-				pressureText.setText(formatPressure(pressure));
-			int n = altitudeData.size();
-			if ((n == 0 || altitudeData.get(n-1).time + altitudeTimeSpacing <= tMillis) &&
-					(!(calibration.equals("nws") || calibration.equals("om")) || pressureAtSeaLevel >= 0 || System.currentTimeMillis() > startTime+10000)) {
-				double alt;
-				if (smoothing.equals("none"))
-					alt = calculateAltitude(pressure);
-				else
-					alt = calculateAltitude(recentPressures.smooth(smoothing));
-				if (showAltitude)
-					altitudeText.setText(formatAltitude(alt));
-				altitudeData.add(new Analysis.TimedDatum(tMillis, alt));
-				if (showGraph)
-					graphView.setData(altitudeData, true);
-			}
-			if (showLapCount && lastLapCountTime + LAP_COUNT_TIME <= tMillis) {
-				lapCountText.setText(""+(new Analysis(altitudeData).countLaps(lapMode)));
-				lastLapCountTime = tMillis;
+	private void updatePressureGraph() {
+		if (showPressureGraph) {
+			pressureGraphView.setData(pressureData, getDataStartTime(), getDataEndTime(), true);
+		}
+	}
 
-			}
-//			Log.v("GiantBarometer", ""+pressure+" "+alt);
+	private double getDataStartTime() {
+		double t;
+		int n = pressureData.size();
+		if (n>0)
+			t = pressureData.get(0).time;
+		else
+			t = 1.e20;
+		n = altitudeData.size();
+		if (n>0)
+			t = Math.min(altitudeData.get(0).time, t);
+		return t;
+	}
+	private double getDataEndTime() {
+		double t;
+		int n = pressureData.size();
+		if (n>0)
+			t = pressureData.get(n-1).time;
+		else
+			t = 0;
+		n = altitudeData.size();
+		if (n>0)
+			t = Math.max(altitudeData.get(n-1).time, t);
+		return t;
+	}
+
+	private void updateAltitudeGraph() {
+		if (showAltGraph) {
+			altGraphView.setData(altitudeData, getDataStartTime(), getDataEndTime(), true);
 		}
-		else {
-			pressureText.setText(" ? ");
-			altitudeText.setText(" ? ");
-		}
+	}
+
+	public void showInvalidValue() {
+		pressureText.setText(" ? ");
+		altitudeText.setText(" ? ");
     }
 
 	private double parseAltitude(String s) {
@@ -531,7 +545,8 @@ public class BarometerActivity extends Activity {
 		zeroedAlt = options.getFloat(Options.PREF_ZEROED_ALTITUDE, (float) standardPressureAtSeaLevel);
 		showPressure = options.getBoolean(Options.PREF_SHOW_PRESSURE, true);
 		showAltitude = options.getBoolean(Options.PREF_SHOW_ALTITUDE, true);
-		showGraph = options.getBoolean(Options.PREF_SHOW_GRAPH, true);
+		showAltGraph = options.getBoolean(Options.PREF_SHOW_ALT_GRAPH, true);
+		showPressureGraph = options.getBoolean(Options.PREF_SHOW_PRESSURE_GRAPH, false);
 		showLapCount = options.getBoolean(Options.PREF_LAP_COUNT, false);
 		calibration = Options.getCalibration(this, options );
 		lapMode = options.getString(Options.PREF_LAP_MODE, "pairs");
@@ -546,9 +561,9 @@ public class BarometerActivity extends Activity {
 		}
 		altitudeUnits = options.getString(Options.PREF_ALTITUDE_UNITS, "meters");
 		if (altitudeUnits.equals("meters"))
-			graphView.setValueScale(1.);
+			altGraphView.setValueScale(1.);
 		else // feet
-			graphView.setValueScale(1./3.280839895);
+			altGraphView.setValueScale(1./3.280839895);
 
 		s = Options.getCalibration(this, options);
 		if (!s.equals(calibration)) {
@@ -565,13 +580,14 @@ public class BarometerActivity extends Activity {
 		pressureText.setVisibility(showPressure ? View.VISIBLE : View.GONE);
 		altitudeText.setVisibility(showAltitude ? View.VISIBLE : View.GONE);
 		lapCountText.setVisibility(showLapCount ? View.VISIBLE : View.GONE);
-		graphView.setVisibility(showGraph ? View.VISIBLE : View.GONE);
+		altGraphView.setVisibility(showAltGraph ? View.VISIBLE : View.GONE);
+		pressureGraphView.setVisibility(showPressureGraph ? View.VISIBLE : View.GONE);
 
 		setOrientation();
 		setFullScreen();
 		showButtons();
 
-        showValue(0,-1);
+        showInvalidValue();
 
 		// normal: 200ms foreground
 
@@ -607,6 +623,7 @@ public class BarometerActivity extends Activity {
 	}
 
 	private void clearData() {
+		pressureData.clear();
 		altitudeData.clear();
 		recentPressures.clear();
 		dataStartTime = System.currentTimeMillis();
@@ -620,7 +637,8 @@ public class BarometerActivity extends Activity {
 
     public void onResetGraph(View view) {
 		clearData();
-		graphView.setData(altitudeData, true);
+		updateAltitudeGraph();
+		updatePressureGraph();
 		dataStartTime = System.currentTimeMillis();
     }
 

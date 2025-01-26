@@ -8,12 +8,14 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 
 import java.util.List;
 
 public class GraphView extends View {
+    private static final String TAG = "GiantBarometer:graph";
     private final Paint backPaint;
     private final float labelX;
     RectF bounds = new RectF();
@@ -35,6 +37,8 @@ public class GraphView extends View {
     private float maxAspect = 1f;
 
     float nudge;
+    private double startTime = 0;
+    private double endTime = 0;
 
     public GraphView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -64,7 +68,7 @@ public class GraphView extends View {
         basePaint = new Paint();
         basePaint.setTextSize(BASE_FONT_SIZE);
 
-        setData(null, true);
+        setData(null, 0, 1, true);
     }
 
     public void setValueScale(double s) {
@@ -72,8 +76,10 @@ public class GraphView extends View {
     }
 
 
-    public void setData(List<Analysis.TimedDatum<Double>> d, boolean force) {
+    public void setData(List<Analysis.TimedDatum<Double>> d, double dataStartTime, double dataEndTime, boolean force) {
         data = d;
+        startTime = dataStartTime;
+        endTime = dataEndTime;
         if (force)
             invalidate();
     }
@@ -106,13 +112,11 @@ public class GraphView extends View {
             return;
 
         double xScale;
-        double xStart;
         double yScale;
         double yStart;
-        xStart = data.get(0).time;
-        int n = data.size();
-        double xEnd = data.get(n-1).time;
-        if (xStart == xEnd) {
+        double xStart = startTime;
+        double xEnd = endTime;
+        if (xStart >= xEnd) {
             xScale = 1;
         }
         else {

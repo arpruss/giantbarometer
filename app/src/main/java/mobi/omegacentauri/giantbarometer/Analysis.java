@@ -29,7 +29,7 @@ public class Analysis {
         double fall = getRise(-1, RISE_TOLERANCE);
         ascents = 0;
         descents = 0;
-        Log.v("GiantBarometer", "rise "+rise+" fall "+fall+" ascents "+ascents+" descents "+descents);
+//        Log.v("GiantBarometer", "rise "+rise+" fall "+fall+" ascents "+ascents+" descents "+descents);
         if (rise < MIN_HALF_LAP_HEIGHT || fall < MIN_HALF_LAP_HEIGHT)
             return 0;
         double height = (rise+fall)/2.;
@@ -116,7 +116,7 @@ public class Analysis {
                 minimum = y;
             }
         }
-        Log.v("GiantBarometer", "minPos "+minPos+" minimum "+minimum);
+//        Log.v("GiantBarometer", "minPos "+minPos+" minimum "+minimum);
         int direction = minPos <= filteredDataCount/2 ? 1 : -1;
         int end = direction == -1 ? 0 : filteredDataCount - 1;
         int pos = minPos;

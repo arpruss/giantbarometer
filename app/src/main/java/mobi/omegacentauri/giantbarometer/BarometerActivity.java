@@ -10,10 +10,13 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.PowerManager;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -141,6 +144,35 @@ public class BarometerActivity extends Activity {
 		return true;
 	}
 
+	void checkBackgroundPermissions() {
+		PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+		String packageName = getPackageName();
+		if (pm.isIgnoringBatteryOptimizations(packageName) ||
+			options.getBoolean(Options.PREF_DONT_ASK_BATTERY, false))
+			return;
+		AlertDialog.Builder ab = new AlertDialog.Builder(this);
+		ab.setTitle("Disable battery optimization");
+		ab.setMessage("To gather data reliably in the background, you should turn off battery optimization for this app.");
+		ab.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				Intent intent = new Intent();
+				intent.setAction(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+				intent.setData(Uri.parse("package:" + packageName));
+				startActivity(intent);
+			}
+		});
+		ab.setCancelable(true);
+		ab.setNegativeButton("Never", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				options.edit().putBoolean(Options.PREF_DONT_ASK_BATTERY, true).apply();
+				finish();
+			}
+		});
+		ab.create().show();
+	}
+
 	@SuppressLint("MissingPermission")
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -163,6 +195,8 @@ public class BarometerActivity extends Activity {
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 				Log.v("GiantBarometer", "checkbox "+isChecked);
 				background = isChecked;
+				if (background)
+					checkBackgroundPermissions();
 			}
 		});
 		works = false;

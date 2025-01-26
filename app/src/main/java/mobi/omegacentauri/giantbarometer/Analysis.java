@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.ListIterator;
 
 public class Analysis {
-    private static final double MIN_HALF_LAP_HEIGHT = 1.5;
+    private static final double MIN_HALF_LAP_HEIGHT = 2;
     List<TimedDatum<Double>> rawData;
     double filteredData[];
     int filteredDataCount;

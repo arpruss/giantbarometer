@@ -97,5 +97,4 @@
         android:onClick="onSettingsClick" />
     </LinearLayout>
 </LinearLayout>
-
 </FrameLayout>

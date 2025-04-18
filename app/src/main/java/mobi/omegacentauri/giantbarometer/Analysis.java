@@ -33,10 +33,13 @@ public class Analysis {
         if (rise < MIN_HALF_LAP_HEIGHT || fall < MIN_HALF_LAP_HEIGHT)
             return 0;
         double height = (rise+fall)/2.;
-        countAscentsAndDescents(height, HALF_LAP_TOLERANCE);
-        if (mode.equals("ascents"))
+        if (! mode.contains("legacy"))
+            countAscentsAndDescents_experimental(height, HALF_LAP_TOLERANCE);
+        else
+            countAscentsAndDescents_old(height, HALF_LAP_TOLERANCE);
+        if (mode.startsWith("ascents"))
             return ascents;
-        else if (mode.equals("descents"))
+        else if (mode.startsWith("descents"))
             return descents;
         else
             return Math.min(ascents,descents);
@@ -78,7 +81,34 @@ public class Analysis {
         filteredDataCount = pos;
     }
 
-    private void countAscentsAndDescents(double height, double halfLapTolerance) {
+    // this experimental algorithm allows mid-level starts
+    private void countAscentsAndDescents_experimental(double height, double halfLapTolerance) {
+        ascents = 0;
+        descents = 0;
+        double lastLow = filteredData[0];
+        double lastHigh = filteredData[1];
+        int direction = 0;
+        double minHeight = height * (1. - halfLapTolerance);
+        for (int i = 1 ; i < filteredDataCount ; i++) {
+            double y = filteredData[i];
+            if (y > lastHigh)
+                lastHigh = y;
+            if (y < lastLow)
+                lastLow = y;
+            if (direction <= 0 && y-lastLow >= minHeight) {
+                ascents++;
+                lastHigh = y; // override past high data in case of drift
+                direction = 1;
+            }
+            else if (direction >= 0 && lastHigh-y >= minHeight) {
+                descents++;
+                lastLow = y; // override past low data in case of drift
+                direction = -1;
+            }
+        }
+    }
+
+    private void countAscentsAndDescents_old(double height, double halfLapTolerance) {
         ascents = 0;
         descents = 0;
         int direction = 0;
@@ -128,7 +158,7 @@ public class Analysis {
             double y = filteredData[pos] * scale;
             if (y > biggestSoFar) {
                 biggestSoFar = y;
-                if ((y-minimum) > biggestFall * fallTolerance) {
+                if (y-minimum > biggestFall * fallTolerance) {
                     peakCandidateHeight = y;
 //                    peakCandidatePos = pos;
                 }

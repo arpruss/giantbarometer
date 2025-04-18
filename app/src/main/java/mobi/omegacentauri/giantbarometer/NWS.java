@@ -55,10 +55,6 @@ public class NWS extends WeatherInfo {
                     JSONObject feature = (JSONObject) features.get(i);
                     String observationsURL = feature.get("id") + "/observations/latest";
                     JSONObject observationProperties = fetchJSON(observationsURL).getJSONObject("properties");
-                    if (observationProperties == null)
-                        continue;
-//                    Log.v("GiantBarometer:NWS", "alt "+altitude);
-//                    double barometricPressure = observationProperties.getJSONObject("barometricPressure").getDouble("value")/100.;
                     pressureAtSeaLevel = observationProperties.getJSONObject(pressureToUse).getDouble("value")/100.;
                     temperature = 273.15 + observationProperties.getJSONObject("temperature").getDouble("value");
                     Log.v(TAG, "t "+temperature+" "+pressureToUse+" "+pressureAtSeaLevel);
@@ -66,6 +62,8 @@ public class NWS extends WeatherInfo {
                     return true;
                 }
                 catch (JSONException e) {
+                }
+                catch (NullPointerException e) {
                 }
             }
             return false;

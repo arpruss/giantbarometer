@@ -45,7 +45,7 @@
         android:key="lapMode"
         android:entries="@array/lapModes"
         android:entryValues="@array/lapModes"
-        android:defaultValue="pairs"/>
+        android:defaultValue="ascents"/>
     <PreferenceCategory android:title="Licenses and Copyrights">
     <Preference android:key="license" android:title="View Licenses and Copyrights"/>
     </PreferenceCategory>

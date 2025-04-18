@@ -48,6 +48,9 @@
         <item>med10000</item>
     </string-array>
     <string-array name="lapModes">
+        <item>ascents (legacy algorithm)</item>
+        <item>descents (legacy algorithm)</item>
+        <item>pairs (legacy algorithm)</item>
         <item>ascents</item>
         <item>descents</item>
         <item>pairs</item>

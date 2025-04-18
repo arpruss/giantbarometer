@@ -33,7 +33,7 @@ public class OpenMeteo extends WeatherInfo {
 
             return true;
         } catch (JSONException e) {
-            Log.e(TAG, "json error "+e);
+        } catch (NullPointerException e) {
         }
 
         return false;

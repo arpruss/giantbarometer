@@ -32,7 +32,6 @@ import java.util.List;
 
 public class BarometerActivity extends Activity {
 	private final static String TAG = "GiantBarometer:activity";
-
     private static final long WAIT_TIME = 6000; // only show invalid value after this amount of waiting
 	double pressureAtSeaLevel = -1;
 	private long lastLapCountTime = -1;

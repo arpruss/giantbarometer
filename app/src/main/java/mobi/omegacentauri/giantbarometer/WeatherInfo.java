@@ -45,14 +45,12 @@ public abstract class WeatherInfo {
         }
         if (timeStamp.length() != 24)
             return;
-        Log.v(TAG, timeStamp);
 
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
 
         try {
             long t = df.parse(timeStamp).getTime();
             if (t < time) {
-                Log.v(TAG, "time from server "+t+" at "+time);
                 time = t;
             }
         } catch (ParseException e) {

@@ -36,6 +36,8 @@ public class BarometerService extends Service implements SensorEventListener, Lo
     private long startTime;
     private long lastLocationTime = Long.MIN_VALUE;
     private long standardPressureTimeout = 5*60000;
+    static final private long standardPressureTimeout_NWS = 5*60000;
+    static final private long standardPressureTimeout_OM = 10*60000;
     private WeatherInfo lastStationData = null;
     private double pressureAtSeaLevel = BarometerActivity.standardPressureAtSeaLevel;
     private double temperature = 273.15 + 15;
@@ -104,9 +106,9 @@ public class BarometerService extends Service implements SensorEventListener, Lo
         gpsAltitude = BarometerActivity.locationPermission.contains("FINE") && options.getBoolean(Options.PREF_GPS_ALTITUDE, false);
         calibration = Options.getCalibration(this, options );
         if (calibration.equals("nws"))
-            standardPressureTimeout = 5 * 60000;
+            standardPressureTimeout = standardPressureTimeout_NWS;
         else
-            standardPressureTimeout = 10 * 60000;
+            standardPressureTimeout = standardPressureTimeout_OM;
 
         sensorManager.registerListener(this,
                 sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE),

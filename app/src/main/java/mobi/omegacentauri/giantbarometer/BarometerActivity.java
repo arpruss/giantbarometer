@@ -56,8 +56,9 @@ public class BarometerActivity extends Activity {
 	private Runnable buttonHideRunnable;
 	private static final long buttonHideTime = 8000;
 
-	List<Analysis.TimedDatum<Double>> altitudeData = new ArrayList<>();
+	ArrayList<Analysis.TimedDatum<Double>> altitudeData = new ArrayList<>();
 	List<Analysis.TimedDatum<Double>> pressureData = new ArrayList<>();
+	List<Analysis.TimedDatum<Double>> smoothedPressureData = new ArrayList<>();
 //	List<Analysis.TimedDatum<Observations>> observations = new ArrayList<>();
 	Analysis.RecentData recentPressures = new Analysis.RecentData(maximumKeep);
 	private GraphView altGraphView;
@@ -218,11 +219,45 @@ public class BarometerActivity extends Activity {
 //	}
 
 	public synchronized void setStationData(WeatherInfo winfo) {
-		if (winfo == null)
+		if (winfo == null || winfo == lastStationData)
 			return;
-		lastStationData = winfo;
+
+		Log.v(TAG, "changing station data");
+
+		// add linear interpolation between previous station data and new station data,
+		// or if this is the first calibration datum, just fill in the missing
+		// altitude data.
+		long previousStationTime = lastStationData == null ? Long.MIN_VALUE : lastStationData.time;
+		if (previousStationTime < winfo.time) {
+			double range = winfo.time - previousStationTime;
+			for (int i = 0; i < altitudeData.size(); i++) {
+				if (altitudeData.get(i).time > previousStationTime) {
+					Log.v(TAG, "deleting old altitude data");
+					altitudeData.subList(i, altitudeData.size()).clear();
+					break;
+				}
+			}
+			for (Analysis.TimedDatum<Double> pdata : smoothedPressureData) {
+				if (pdata.time > previousStationTime) {
+					double calibrationPressure;
+					double calibrationTemperature;
+					if (lastStationData == null || pdata.time >= winfo.time) {
+						calibrationPressure = winfo.pressureAtSeaLevel;
+						calibrationTemperature = winfo.temperature;
+					} else {
+						double t = (pdata.time - previousStationTime) / range;
+						calibrationPressure = lastStationData.pressureAtSeaLevel * (1-t) + winfo.pressureAtSeaLevel * t;
+						calibrationTemperature = lastStationData.temperature * (1-t) + winfo.temperature * t;
+					}
+					double alt = calculateAltitude(pdata.value, calibrationPressure, calibrationTemperature);
+					altitudeData.add(new Analysis.TimedDatum(pdata.time, alt));
+				}
+			}
+		}
+
 		pressureAtSeaLevel = winfo.pressureAtSeaLevel;
 		temperature = winfo.temperature;
+		lastStationData = winfo;
 	}
 
 	@Override
@@ -339,7 +374,6 @@ public class BarometerActivity extends Activity {
 	public void _addObservations(List<Analysis.TimedDatum<Observations>> os) {
 		if (os.isEmpty())
 			return;
-		boolean updateAltitudes = false;
 		double lastAltitude = Double.NaN;
 		long systemTime = System.currentTimeMillis();
 		for (Analysis.TimedDatum<Observations> o: os) {
@@ -350,26 +384,33 @@ public class BarometerActivity extends Activity {
 			}
 //			observations.add(o);
 			int n = pressureData.size();
-			if (o.value.stationData != null)
+			if (o.value.stationData != null) {
 				setStationData(o.value.stationData);
+			}
 			if ((n == 0 || pressureData.get(n - 1).time + dataTimeSpacing <= o.time)) {
-				if (! Double.isNaN(o.value.pressure))
+				if (! Double.isNaN(o.value.pressure)) {
 					pressureData.add(new Analysis.TimedDatum<Double>(o.time, o.value.pressure));
-				if (!(calibration.equals("nws") || calibration.equals("om")) || pressureAtSeaLevel >= 0 || systemTime > startTime + 10000)
-				{
-					boolean haveAltitude = false;
-					if (!Double.isNaN(o.value.altitude)) {
-						lastAltitude = o.value.altitude;
-						haveAltitude = true;
-					} else if (!gpsAltitude && !Double.isNaN(o.value.pressure)) {
-						if (smoothing.equals("none"))
-							lastAltitude = calculateAltitude(o.value.pressure);
-						else
-							lastAltitude = calculateAltitude(recentPressures.smooth(smoothing));
-						haveAltitude = true;
+					double smoothedPressure;
+					if (smoothing.equals("none")) {
+						smoothedPressure = o.value.pressure;
 					}
-					if (haveAltitude)
-						altitudeData.add(new Analysis.TimedDatum(o.time, lastAltitude));
+					else {
+						smoothedPressure = recentPressures.smooth(smoothing);
+					}
+					smoothedPressureData.add(new Analysis.TimedDatum<Double>(o.time, smoothedPressure));
+					if (!(calibration.equals("nws") || calibration.equals("om")) || pressureAtSeaLevel >= 0 || systemTime > startTime + 10000)
+					{
+						boolean haveAltitude = false;
+						if (!Double.isNaN(o.value.altitude)) {
+							lastAltitude = o.value.altitude;
+							haveAltitude = true;
+						} else if (!gpsAltitude && !Double.isNaN(o.value.pressure)) {
+							lastAltitude = calculateAltitude(smoothedPressure);
+							haveAltitude = true;
+						}
+						if (haveAltitude)
+							altitudeData.add(new Analysis.TimedDatum(o.time, lastAltitude));
+					}
 				}
 			}
 		}
@@ -460,21 +501,22 @@ public class BarometerActivity extends Activity {
 		return  44330 * (1 - Math.pow(pressure/pressureAtSeaLevel, 1./5.255));
 	}
 
+	private double calculateAltitude(double pressure, double p0, double temperature) {
+		// https://physics.stackexchange.com/questions/333475/how-to-calculate-altitude-from-current-temperature-and-pressure
+		if (calibration.equals("nws"))
+			return (Math.pow(p0/pressure,1/5.257)-1)*temperature / 0.0065;
+		else
+			return calculatePressureWithoutTemperature(pressure, p0);
+	}
+
 	private synchronized double calculateAltitude(double pressure) {
 		double p0 = (!(calibration.equals("nws") || calibration.equals("om")) || pressureAtSeaLevel < 0) ? standardPressureAtSeaLevel : pressureAtSeaLevel;
 
-		// todo: temperature
-		// https://physics.stackexchange.com/questions/333475/how-to-calculate-altitude-from-current-temperature-and-pressure
-		double alt;
-		if (calibration.equals("nws"))
-			alt = (Math.pow(p0/pressure,1/5.257)-1)*temperature / 0.0065;
-		else
-			alt = calculatePressureWithoutTemperature(pressure, p0);
+		double alt = calculateAltitude(pressure, p0, temperature);
 		if (calibration.equals("relative")) {
-			alt -= zeroedAlt;
+			return alt - zeroedAlt;
 		}
 		return alt;
-
 	}
 
 
@@ -547,7 +589,6 @@ public class BarometerActivity extends Activity {
 		showAltGraph = options.getBoolean(Options.PREF_SHOW_ALT_GRAPH, true);
 		showPressureGraph = options.getBoolean(Options.PREF_SHOW_PRESSURE_GRAPH, false);
 		showLapCount = options.getBoolean(Options.PREF_LAP_COUNT, false);
-		calibration = Options.getCalibration(this, options );
 		lapMode = options.getString(Options.PREF_LAP_MODE, "pairs");
 		gpsAltitude = locationPermission.contains("FINE") && options.getBoolean(Options.PREF_GPS_ALTITUDE, false);
 		Log.v(TAG, "gpsAltitude "+gpsAltitude);
@@ -624,6 +665,7 @@ public class BarometerActivity extends Activity {
 	private void clearData() {
 		pressureData.clear();
 		altitudeData.clear();
+		smoothedPressureData.clear();
 		recentPressures.clear();
 		dataStartTime = System.currentTimeMillis();
 	}

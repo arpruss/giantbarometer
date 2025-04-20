@@ -54,11 +54,13 @@ public class NWS extends WeatherInfo {
                 try {
                     JSONObject feature = (JSONObject) features.get(i);
                     String observationsURL = feature.get("id") + "/observations/latest";
+                    Log.v(TAG, "getting data from "+observationsURL);
                     JSONObject observationProperties = fetchJSON(observationsURL).getJSONObject("properties");
                     pressureAtSeaLevel = observationProperties.getJSONObject(pressureToUse).getDouble("value")/100.;
                     temperature = 273.15 + observationProperties.getJSONObject("temperature").getDouble("value");
+                    String timeStamp = observationProperties.getString("timestamp");
                     Log.v(TAG, "t "+temperature+" "+pressureToUse+" "+pressureAtSeaLevel);
-                    time = System.currentTimeMillis();
+                    setTime(timeStamp);
                     return true;
                 }
                 catch (JSONException e) {

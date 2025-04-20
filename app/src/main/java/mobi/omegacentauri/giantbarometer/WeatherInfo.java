@@ -13,6 +13,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 
 public abstract class WeatherInfo {
     double pressureAtSeaLevel;
@@ -22,6 +25,40 @@ public abstract class WeatherInfo {
     static final int connectTimeout = 10000;
 
     abstract public boolean getData(Location location);
+    static final String TAG = "GiantBarometer.WInfo";
+
+    protected void setTime(String timeStamp) {
+        //2025-04-20T14:55:00+00:00 [25]
+        //2025-04-20T15:45 [16]
+
+        Log.v(TAG, timeStamp);
+
+        time = System.currentTimeMillis();
+
+        if (timeStamp.length() == 16)
+            timeStamp += ":00";
+        if (timeStamp.length() == 19)
+            timeStamp += "+0000";
+        if (timeStamp.length() == 25 && timeStamp.charAt(22) == ':'
+                && (timeStamp.charAt(19) == '+' || timeStamp.charAt(19) == '-')) {
+            timeStamp = timeStamp.substring(0, 22) + timeStamp.substring(23); // omit colon
+        }
+        if (timeStamp.length() != 24)
+            return;
+        Log.v(TAG, timeStamp);
+
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
+
+        try {
+            long t = df.parse(timeStamp).getTime();
+            if (t < time) {
+                Log.v(TAG, "time from server "+t+" at "+time);
+                time = t;
+            }
+        } catch (ParseException e) {
+        }
+
+    }
     public static JSONObject fetchJSON(String address) {
         try {
             URL url = new URL(address);

@@ -221,6 +221,8 @@ public class BarometerActivity extends Activity {
 	public synchronized void setStationData(WeatherInfo winfo) {
 		if (winfo == null || winfo == lastStationData)
 			return;
+		if (lastStationData != null && lastStationData.time > winfo.time)
+			return;
 
 		Log.v(TAG, "changing station data");
 

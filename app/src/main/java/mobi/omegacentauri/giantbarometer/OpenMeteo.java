@@ -30,8 +30,8 @@ public class OpenMeteo extends WeatherInfo {
 
             pressureAtSeaLevel = current.getDouble("pressure_msl");
             temperature = 273.15 + current.getDouble("temperature");
-
-            time = System.currentTimeMillis();
+            String timeStamp = current.getString("time");
+            setTime(timeStamp);
 
             return true;
         } catch (JSONException e) {
